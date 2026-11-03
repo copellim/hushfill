@@ -1,0 +1,236 @@
+<!doctype html>
+<html lang="it">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; worker-src 'self' blob:; connect-src 'self' data: blob: ws:"
+    />
+    <title>PDF Firma</title>
+  </head>
+  <body>
+    <header id="toolbar">
+      <div class="group">
+        <button id="btn-open" title="Apri (Ctrl+O)">Apri</button>
+        <button id="btn-save" title="Salva una copia firmata (Ctrl+S)" disabled>Salva</button>
+      </div>
+      <div class="group">
+        <button id="btn-zoom-out" title="Riduci (Ctrl+-)" disabled>&minus;</button>
+        <span id="zoom-label">100%</span>
+        <button id="btn-zoom-in" title="Ingrandisci (Ctrl++)" disabled>+</button>
+        <button id="btn-fit" title="Adatta alla larghezza (Ctrl+0)" disabled>Adatta</button>
+      </div>
+      <div class="group">
+        <input id="page-input" type="number" min="1" value="1" disabled />
+        <span id="page-count">/ 0</span>
+      </div>
+      <div class="group">
+        <button id="btn-text" title="Aggiungi testo libero sulla pagina" disabled>Testo</button>
+        <button id="btn-sign" title="Aggiungi una firma" disabled>Firma</button>
+      </div>
+      <div class="group">
+        <select id="profile-select" title="Profilo attivo"></select>
+        <button id="btn-profiles" title="Gestisci profili e campi">Profili</button>
+        <button id="btn-autofill" class="primary" title="Riconosci i campi con Jev e compila dal profilo" disabled>Compila</button>
+      </div>
+      <div class="group">
+        <button id="btn-settings" title="Impostazioni: chiave e server di Jev">Impostazioni</button>
+      </div>
+      <div id="hint" class="hint"></div>
+    </header>
+
+    <!-- pdf.js accetta solo un div come contenitore. -->
+    <div id="viewer-container">
+      <div id="viewer" class="pdfViewer"></div>
+    </div>
+
+    <div id="empty-state">
+      <p>Trascina qui un PDF oppure</p>
+      <button id="btn-open-empty" class="primary">Apri un documento</button>
+    </div>
+
+    <div id="busy" hidden><span id="busy-text">Attendere…</span></div>
+
+    <dialog id="sign-dialog">
+      <h2>Firma</h2>
+      <nav class="tabs">
+        <button type="button" data-tab="draw" class="active">Disegna</button>
+        <button type="button" data-tab="type">Scrivi</button>
+        <button type="button" data-tab="import">Importa</button>
+      </nav>
+
+      <section data-panel="draw">
+        <canvas id="sign-canvas" width="1200" height="400"></canvas>
+      </section>
+
+      <section data-panel="type" hidden>
+        <input id="sign-text" type="text" placeholder="Nome e cognome" autocomplete="off" />
+        <div id="sign-text-preview"></div>
+      </section>
+
+      <section data-panel="import" hidden>
+        <div id="sign-import-drop" class="sign-import">
+          <img id="sign-import-preview" alt="Anteprima della firma importata" hidden />
+          <p id="sign-import-empty" class="muted">
+            Scegli un'immagine della firma (PNG, JPG, WebP, GIF, BMP, SVG) o trascinala qui.
+          </p>
+        </div>
+        <div class="row">
+          <button type="button" id="sign-import-choose">Scegli immagine…</button>
+          <label class="check"><input type="checkbox" id="sign-import-transparent" checked /> Rendi trasparente lo sfondo chiaro</label>
+        </div>
+        <p id="sign-import-error" class="error"></p>
+        <input id="sign-import-file" type="file" accept="image/png,image/jpeg,image/webp,image/gif,image/bmp,image/svg+xml" hidden />
+      </section>
+
+      <div class="row">
+        <label id="sign-color-label">Colore
+          <select id="sign-color">
+            <option value="#1a3c8f">Blu</option>
+            <option value="#111111">Nero</option>
+          </select>
+        </label>
+        <button type="button" id="sign-clear">Cancella</button>
+      </div>
+
+      <div class="row footer">
+        <label class="check"><input type="checkbox" id="sign-save-profile" /> Salva come firma del profilo «<span id="sign-save-profile-label"></span>»</label>
+        <span class="spacer"></span>
+        <button type="button" id="sign-cancel">Annulla</button>
+        <button type="button" id="sign-ok" class="primary">Posiziona</button>
+      </div>
+    </dialog>
+
+    <dialog id="profile-dialog" class="wide">
+      <h2>Profili</h2>
+      <nav class="tabs">
+        <button type="button" data-ptab="profiles" class="active">Profili</button>
+        <button type="button" data-ptab="headings">Campi del profilo</button>
+      </nav>
+
+      <section data-ppanel="profiles" class="profiles-layout">
+        <aside>
+          <ul id="profile-list"></ul>
+          <div class="row wrap">
+            <button type="button" id="profile-new">Nuovo</button>
+            <button type="button" id="profile-duplicate">Duplica</button>
+            <button type="button" id="profile-delete">Elimina</button>
+          </div>
+        </aside>
+        <div>
+          <div id="profile-editor">
+            <div class="row">
+              <label class="grow">Nome del profilo <input id="profile-name" type="text" /></label>
+              <button type="button" id="profile-set-active" title="Usa questo profilo per Compila e Firma">Rendi attivo</button>
+            </div>
+            <div id="profile-values"></div>
+            <div class="profile-signature">
+              <span>Firma del profilo</span>
+              <img id="profile-signature-img" alt="Firma del profilo" />
+              <button type="button" id="profile-signature-set">Crea firma</button>
+              <button type="button" id="profile-signature-remove">Rimuovi</button>
+            </div>
+          </div>
+          <p id="profile-none" class="muted">Nessun profilo. Creane uno con «Nuovo».</p>
+        </div>
+      </section>
+
+      <section data-ppanel="headings" hidden>
+        <p class="muted">
+          I campi sono comuni a tutti i profili. Per riconoscere i campi del modulo, a Jev vengono inviate solo le
+          intestazioni e le descrizioni: i valori restano su questo computer.
+        </p>
+        <div id="heading-list"></div>
+        <button type="button" id="heading-add">Aggiungi campo</button>
+      </section>
+
+      <div class="row footer">
+        <p id="profile-error" class="error"></p>
+        <span class="spacer"></span>
+        <button type="button" id="profile-cancel">Annulla</button>
+        <button type="button" id="profile-save" class="primary">Salva</button>
+      </div>
+    </dialog>
+
+    <dialog id="autofill-dialog" class="wide">
+      <h2>Compila con profilo</h2>
+      <div class="row">
+        <label>Profilo <select id="autofill-profile"></select></label>
+        <span class="spacer"></span>
+        <span id="autofill-meta" class="muted"></span>
+      </div>
+      <div class="autofill-head">
+        <span></span><span>Campo del modulo</span><span>Informazione</span><span>Valore</span><span>Jev</span>
+      </div>
+      <div id="autofill-rows"></div>
+      <details id="autofill-unmatched">
+        <summary></summary>
+        <div id="autofill-unmatched-rows"></div>
+      </details>
+      <div class="row footer">
+        <span class="spacer"></span>
+        <button type="button" id="autofill-cancel">Annulla</button>
+        <button type="button" id="autofill-apply" class="primary">Compila i campi selezionati</button>
+      </div>
+    </dialog>
+
+    <dialog id="settings-dialog">
+      <form id="settings-form">
+        <h2>Impostazioni di Jev</h2>
+        <p class="note">
+          Jev riconosce quali informazioni chiede ogni campo; riceve solo le descrizioni dei campi e le intestazioni dei
+          profili, mai i valori. La chiave viene cifrata col portachiavi di sistema e non viene più mostrata.
+        </p>
+
+        <div class="settings-grid">
+          <label for="settings-key">Chiave API</label>
+          <div class="settings-value">
+            <input id="settings-key" type="password" autocomplete="off" spellcheck="false" />
+            <div class="row compact">
+              <span id="settings-key-state" class="note"></span>
+              <span class="spacer"></span>
+              <button type="button" id="settings-key-remove">Rimuovi chiave</button>
+            </div>
+          </div>
+
+          <label for="settings-model">Modello</label>
+          <div class="settings-value">
+            <input id="settings-model" type="text" spellcheck="false" />
+            <span id="settings-model-env" class="note warn" hidden>Impostato da TYPESAFE_MODEL, che ha la precedenza.</span>
+          </div>
+
+          <label for="settings-url">Server</label>
+          <div class="settings-value">
+            <input id="settings-url" type="text" spellcheck="false" />
+            <span id="settings-url-env" class="note warn" hidden>Impostato da TYPESAFE_BASE_URL, che ha la precedenza.</span>
+          </div>
+        </div>
+
+        <p id="settings-result" class="note" role="status"></p>
+        <div class="row footer">
+          <button type="button" id="settings-test">Prova connessione</button>
+          <span class="spacer"></span>
+          <button type="button" id="settings-cancel">Annulla</button>
+          <button type="submit" class="primary">Salva</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="password-dialog">
+      <form method="dialog" id="password-form">
+        <h2>Documento protetto</h2>
+        <p id="password-message">Inserisci la password per aprire il documento.</p>
+        <input id="password-input" type="password" autocomplete="off" />
+        <div class="row footer">
+          <span class="spacer"></span>
+          <button type="button" id="password-cancel">Annulla</button>
+          <button type="submit" class="primary">Apri</button>
+        </div>
+      </form>
+    </dialog>
+
+    <div id="toast" hidden></div>
+
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

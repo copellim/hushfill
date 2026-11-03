@@ -1,0 +1,82 @@
+{
+  "name": "pdf-firma",
+  "productName": "PDF Firma",
+  "version": "1.0.0",
+  "description": "Visualizzatore PDF semplice: compila i moduli, aggiungi testo e firma",
+  "author": "Michele Copelli <copelli.m@gmail.com>",
+  "license": "MIT",
+  "private": true,
+  "main": "electron/main.cjs",
+  "scripts": {
+    "dev": "node scripts/dev.mjs",
+    "build": "vite build",
+    "start": "vite build && electron .",
+    "typecheck": "tsc --noEmit",
+    "test": "node --experimental-strip-types --test tests/*.test.ts",
+    "setup": "npm install && node node_modules/electron/install.js",
+    "dist": "vite build && electron-builder",
+    "dist:linux": "vite build && electron-builder --linux",
+    "dist:win": "vite build && electron-builder --win",
+    "dist:mac": "vite build && electron-builder --mac",
+    "install:linux": "vite build && electron-builder --linux dir && sh scripts/install-linux.sh"
+  },
+  "devDependencies": {
+    "@fontsource/dancing-script": "^5.3.0",
+    "electron": "^45.2.1",
+    "electron-builder": "^26.18.0",
+    "pdf-lib": "^1.17.1",
+    "pdfjs-dist": "^6.5.438",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.5"
+  },
+  "build": {
+    "appId": "it.copelli.pdffirma",
+    "productName": "PDF Firma",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**",
+      "electron/**",
+      "package.json"
+    ],
+    "fileAssociations": [
+      {
+        "ext": "pdf",
+        "name": "Documento PDF",
+        "mimeType": "application/pdf",
+        "role": "Editor"
+      }
+    ],
+    "linux": {
+      "executableName": "pdf-firma",
+      "target": [
+        "AppImage",
+        "deb",
+        "pacman"
+      ],
+      "category": "Office",
+      "icon": "build/icon.png",
+      "mimeTypes": [
+        "application/pdf"
+      ]
+    },
+    "win": {
+      "target": [
+        "nsis"
+      ],
+      "icon": "build/icon.png"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    },
+    "mac": {
+      "target": [
+        "dmg"
+      ],
+      "category": "public.app-category.productivity",
+      "icon": "build/icon.png"
+    }
+  }
+}
