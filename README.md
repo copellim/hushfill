@@ -1,4 +1,4 @@
-# PDF Firma
+# Hushfill
 
 Visualizzatore PDF desktop, semplice: compila i moduli, scrive sulle righe vuote dei moduli "da stampare", aggiunge testo libero e firma. Con i profili salvati riconosce i campi da compilare tramite Jev e li riempie con i tuoi dati. Linux, Windows e macOS (Electron).
 
@@ -25,7 +25,9 @@ Visualizzatore PDF desktop, semplice: compila i moduli, scrive sulle righe vuote
 
 Nella revisione puoi far crescere il profilo mentre compili. Se un campo riconosciuto non ha valore nel profilo attivo e ne scrivi uno, "salva nel profilo" (spuntato di default) lo memorizza. Se scrivi un valore in un campo che Jev non ha associato a niente, la riga diventa "nuovo campo del profilo", con un nome proposto dal testo stampato accanto, che puoi correggere: confermando, il campo si aggiunge alle intestazioni (per tutti i profili) e il valore al profilo attivo. Un campo nuovo con il nome di uno esistente non si duplica, e un valore già presente nel profilo non viene mai sovrascritto da qui.
 
-I profili sono salvati cifrati con il portachiavi di sistema (`safeStorage` di Electron: Secret Service o KWallet su Linux, DPAPI su Windows, Portachiavi su macOS) in `profiles.enc` nella cartella dati dell'app (`~/.config/PDF Firma` su Linux).
+I profili sono salvati cifrati con il portachiavi di sistema (`safeStorage` di Electron: Secret Service o KWallet su Linux, DPAPI su Windows, Portachiavi su macOS) in `profiles.enc` nella cartella dati dell'app (`~/.config/Hushfill` su Linux).
+
+L'app prima si chiamava PDF Firma. Al primo avvio Hushfill importa profili e chiave di Jev dalla vecchia cartella (`~/.config/PDF Firma`): la chiave di cifratura è legata al nome dell'app, quindi li fa leggere a un processo avviato col nome vecchio e li ricifra con la sua, senza scriverli in chiaro su disco. La vecchia cartella resta com'è; dopo aver controllato i profili si possono cancellare lei e la voce "PDF Firma Safe Storage" del portachiavi.
 
 Su Linux il portachiavi si sceglie all'avvio guardando il bus di sessione D-Bus, non il nome del desktop: un servizio Secret Service in esecuzione (gnome-keyring, KeePassXC, KWallet recente) vince su KWallet, uno in esecuzione vince su uno solo attivabile. Serve perché Chromium decide dal desktop e su quelli che non conosce (Hyprland, Sway…) ripiega su una chiave fissa. Se non trova nessun portachiavi l'app non salva in chiaro, e l'errore dice cosa ha cercato. `--password-store=...` da riga di comando ha la precedenza.
 
@@ -37,7 +39,7 @@ Nella stessa finestra si cambiano il modello (default `jev-1.14.0`, fissato perc
 
 In sviluppo le variabili d'ambiente `TYPESAFE_API_KEY`, `TYPESAFE_MODEL` e `TYPESAFE_BASE_URL`, se impostate, hanno la precedenza sui valori salvati; la finestra lo segnala.
 
-Per capire perché un campo è stato riconosciuto male, lancia l'app dal terminale con `PDF_FIRMA_DEBUG_JEV=1` (per esempio `PDF_FIRMA_DEBUG_JEV=1 ~/.local/opt/pdf-firma/pdf-firma modulo.pdf`): ogni domanda a Jev viene stampata con la sua risposta. Ci sono solo testo del modulo e intestazioni, mai valori del profilo né la chiave.
+Per capire perché un campo è stato riconosciuto male, lancia l'app dal terminale con `HUSHFILL_DEBUG_JEV=1` (per esempio `HUSHFILL_DEBUG_JEV=1 ~/.local/opt/hushfill/hushfill modulo.pdf`): ogni domanda a Jev viene stampata con la sua risposta. Ci sono solo testo del modulo e intestazioni, mai valori del profilo né la chiave.
 
 ## Sviluppo
 
@@ -57,10 +59,10 @@ Linux, per l'utente corrente (nessun sudo):
 
 ```sh
 npm run install:linux
-xdg-mime default pdf-firma.desktop application/pdf   # facoltativo: lettore PDF predefinito
+xdg-mime default hushfill.desktop application/pdf   # facoltativo: lettore PDF predefinito
 ```
 
-Copia l'app in `~/.local/opt/pdf-firma`, crea `~/.local/bin/pdf-firma` e la voce di menu registrata per `application/pdf`.
+Copia l'app in `~/.local/opt/hushfill`, crea `~/.local/bin/hushfill` e la voce di menu registrata per `application/pdf`. Toglie la vecchia installazione di PDF Firma, se c'è, e se era il lettore PDF predefinito lo passa a Hushfill.
 
 Pacchetti: `npm run dist:linux` (AppImage, deb, pacman), `npm run dist:win` (installer NSIS), `npm run dist:mac` (dmg, va eseguito su macOS). Escono in `release/`.
 

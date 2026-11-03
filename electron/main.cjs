@@ -4,6 +4,7 @@
 const { app, BrowserWindow, ipcMain, dialog, Menu, shell, safeStorage } = require("electron");
 const path = require("node:path");
 const fs = require("node:fs");
+const { spawn } = require("node:child_process");
 const { detectPasswordStore } = require("./keyring.cjs");
 
 const DEV_URL = process.env.VITE_DEV_SERVER_URL;
@@ -20,6 +21,25 @@ const LOOPBACK_HOSTS = new Set(["localhost", "127.0.0.1", "[::1]"]);
 
 const PROFILES_FILE_NAME = "profiles.enc";
 const JEV_SETTINGS_FILE_NAME = "jev.enc";
+
+// L'app si chiamava "PDF Firma". safeStorage lega la chiave al nome dell'app
+// (su Linux la voce "<nome> Safe Storage" del portachiavi, su macOS quella
+// del Portachiavi), quindi Hushfill non sa decifrare i file vecchi. Al primo
+// avvio rilancia sé stesso con lo switch qui sotto e il nome vecchio: quel
+// processo legge i file della vecchia cartella dati e li passa in chiaro su
+// una pipe (fd 3), mai su disco; questo li ricifra con la chiave nuova.
+const LEGACY_APP_NAME = "PDF Firma";
+const LEGACY_EXPORT_SWITCH = "export-legacy-data";
+const LEGACY_MIGRATED_MARKER = "migrato-da-pdf-firma";
+const LEGACY_EXPORT_TIMEOUT_MS = 120_000; // il portachiavi può chiedere di sbloccarsi
+const LEGACY_FILES = [PROFILES_FILE_NAME, JEV_SETTINGS_FILE_NAME];
+const legacyUserDataDir = path.join(app.getPath("appData"), LEGACY_APP_NAME);
+const exportingLegacyData = app.commandLine.hasSwitch(LEGACY_EXPORT_SWITCH);
+if (exportingLegacyData) {
+  // Prima di "ready": dopo, Chromium ha già scelto la chiave.
+  app.setName(LEGACY_APP_NAME);
+  app.setPath("userData", legacyUserDataDir);
+}
 
 // Il portachiavi va scelto prima che l'app sia pronta: dopo, Chromium ha già
 // deciso. Un --password-store passato a mano ha la precedenza.
@@ -80,7 +100,7 @@ function createWindow(initialPath = null) {
     minWidth: 640,
     minHeight: 480,
     backgroundColor: "#2b2d31",
-    title: "PDF Firma",
+    title: "Hushfill",
     icon: path.join(__dirname, "..", "build", "icon.png"),
     webPreferences: {
       preload: path.join(__dirname, "preload.cjs"),
@@ -356,7 +376,7 @@ ipcMain.handle("jev-settings-save", async (_event, form) => {
 
 // Domanda banale, senza dati dell'utente, per verificare chiave e server.
 const JEV_PING = {
-  state: "Prova di connessione dall'app PDF Firma.",
+  state: "Prova di connessione dall'app Hushfill.",
   questions: { prova: { type: "choice", instructions: "Questa è una prova di connessione: rispondi sì.", criteria: { si: "sì", no: "no" } } },
 };
 
@@ -370,7 +390,7 @@ ipcMain.handle("jev-test", async (_event, form) => {
   return { model: response.model ?? config.model, milliseconds: Date.now() - started };
 });
 
-// PDF_FIRMA_DEBUG_JEV=1 stampa sul terminale ogni domanda con la risposta,
+// HUSHFILL_DEBUG_JEV=1 stampa sul terminale ogni domanda con la risposta,
 // per capire perché un campo è stato riconosciuto male. Domande e risposte
 // non contengono valori del profilo (solo testo del modulo e intestazioni);
 // la chiave non viene mai stampata.
@@ -383,17 +403,116 @@ function logJevExchange(request, response) {
 
 ipcMain.handle("jev-decide", async (_event, request) => {
   const response = await callJev(await resolveJevConfig(), request);
-  if (process.env.PDF_FIRMA_DEBUG_JEV === "1") {
+  if (process.env.HUSHFILL_DEBUG_JEV === "1") {
     logJevExchange(request, response);
   }
   return response;
 });
 
+// --- Migrazione dei dati di "PDF Firma" -----------------------------------------
+
+// Processo figlio, avviato col nome vecchio: legge e decifra i file della
+// vecchia cartella dati e li scrive su fd 3. Non apre finestre.
+async function exportLegacyData() {
+  let payload;
+  try {
+    const files = {};
+    for (const name of LEGACY_FILES) {
+      files[name] = await readEncrypted(name);
+    }
+    payload = { files };
+  } catch (error) {
+    payload = { error: error.message };
+  }
+  writeAllToFd(3, Buffer.from(JSON.stringify(payload), "utf8"));
+  app.exit(0);
+}
+
+// writeSync su una pipe può scrivere solo una parte, o rispondere EAGAIN se è piena.
+function writeAllToFd(fd, bytes) {
+  let offset = 0;
+  while (offset < bytes.length) {
+    try {
+      offset += fs.writeSync(fd, bytes, offset);
+    } catch (error) {
+      if (error.code !== "EAGAIN") {
+        throw error;
+      }
+    }
+  }
+}
+
+// Solo con la cartella dati predefinita: con --user-data-dir (prove, profili
+// di sviluppo) non si va a leggere la cartella vera dell'utente.
+function legacyMigrationNeeded() {
+  const userData = app.getPath("userData");
+  if (userData !== path.join(app.getPath("appData"), app.getName())) {
+    return false;
+  }
+  if (fs.existsSync(path.join(userData, LEGACY_MIGRATED_MARKER))) {
+    return false;
+  }
+  const exists = (dir) => LEGACY_FILES.some((name) => fs.existsSync(path.join(dir, name)));
+  return exists(legacyUserDataDir) && !exists(userData);
+}
+
+function runLegacyExport() {
+  // In sviluppo execPath è il binario di Electron e va passata la cartella dell'app.
+  const args = [...(app.isPackaged ? [] : [app.getAppPath()]), `--${LEGACY_EXPORT_SWITCH}`];
+  const child = spawn(process.execPath, args, { stdio: ["ignore", "inherit", "inherit", "pipe"] });
+  return new Promise((resolve, reject) => {
+    const chunks = [];
+    const timer = setTimeout(() => {
+      child.kill();
+      reject(new Error("il portachiavi non ha risposto in tempo"));
+    }, LEGACY_EXPORT_TIMEOUT_MS);
+    child.stdio[3].on("data", (chunk) => chunks.push(chunk));
+    child.on("error", reject);
+    child.on("close", () => {
+      clearTimeout(timer);
+      try {
+        const payload = JSON.parse(Buffer.concat(chunks).toString("utf8"));
+        payload.error ? reject(new Error(payload.error)) : resolve(payload.files);
+      } catch {
+        reject(new Error("il processo di lettura dei dati vecchi non ha risposto"));
+      }
+    });
+  });
+}
+
+// La vecchia cartella resta com'è: il segnaposto impedisce di rifare la
+// migrazione (per esempio dopo "Rimuovi chiave", che cancella jev.enc).
+async function migrateLegacyData() {
+  if (!legacyMigrationNeeded()) {
+    return;
+  }
+  try {
+    const files = await runLegacyExport();
+    for (const [name, text] of Object.entries(files)) {
+      if (text !== null) {
+        await writeEncrypted(name, text);
+      }
+    }
+    fs.writeFileSync(
+      path.join(app.getPath("userData"), LEGACY_MIGRATED_MARKER),
+      `Profili e impostazioni di Jev importati da ${legacyUserDataDir} il ${new Date().toISOString()}.\n`,
+    );
+    console.info(`Dati di ${LEGACY_APP_NAME} importati da ${legacyUserDataDir}`);
+  } catch (error) {
+    dialog.showErrorBox(
+      "Dati di PDF Firma non importati",
+      `Profili e chiave di Jev della versione precedente non sono stati importati: ${error.message}.\n\nSono ancora in ${legacyUserDataDir}: riapri l'app per riprovare.`,
+    );
+  }
+}
+
 // --- Ciclo di vita ------------------------------------------------------------
 
 // Una sola istanza: un secondo lancio ("Apri con" su un altro PDF)
 // apre una nuova finestra nel processo già attivo.
-if (!app.requestSingleInstanceLock()) {
+if (exportingLegacyData) {
+  app.whenReady().then(exportLegacyData);
+} else if (!app.requestSingleInstanceLock()) {
   app.quit();
 } else {
   let pendingMacFile = null;
@@ -417,10 +536,11 @@ if (!app.requestSingleInstanceLock()) {
     }
   });
 
-  app.whenReady().then(() => {
+  app.whenReady().then(async () => {
     if (process.platform !== "darwin") {
       Menu.setApplicationMenu(null);
     }
+    await migrateLegacyData();
     createWindow(pendingMacFile ?? pdfFromArgv(process.argv));
     app.on("activate", () => {
       if (BrowserWindow.getAllWindows().length === 0) {

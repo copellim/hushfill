@@ -55,7 +55,7 @@ const BLANK_TEXT_RIGHT_PADDING = 2;
 // così non tocca i trattini bassi.
 const BLANK_RECT_BASELINE_OFFSET = 2;
 const TEXT_ABOVE_LINE = 1;
-const APP_NAME = "PDF Firma";
+const APP_NAME = "Hushfill";
 
 const $ = <T extends HTMLElement>(selector: string) => document.querySelector<T>(selector)!;
 

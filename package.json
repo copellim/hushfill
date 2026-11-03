@@ -1,6 +1,6 @@
 {
-  "name": "pdf-firma",
-  "productName": "PDF Firma",
+  "name": "hushfill",
+  "productName": "Hushfill",
   "version": "1.0.0",
   "description": "Visualizzatore PDF semplice: compila i moduli, aggiungi testo e firma",
   "author": "Michele Copelli <copelli.m@gmail.com>",
@@ -30,8 +30,8 @@
     "vite": "^8.3.5"
   },
   "build": {
-    "appId": "it.copelli.pdffirma",
-    "productName": "PDF Firma",
+    "appId": "it.copelli.hushfill",
+    "productName": "Hushfill",
     "directories": {
       "output": "release"
     },
@@ -49,7 +49,7 @@
       }
     ],
     "linux": {
-      "executableName": "pdf-firma",
+      "executableName": "hushfill",
       "target": [
         "AppImage",
         "deb",
@@ -78,5 +78,9 @@
       "category": "public.app-category.productivity",
       "icon": "build/icon.png"
     }
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/copellim/hushfill.git"
   }
 }
