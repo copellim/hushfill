@@ -1,34 +1,34 @@
 # Hushfill
 
-Visualizzatore PDF desktop (Electron + pdf.js + pdf-lib, TypeScript con Vite): compila moduli, scrive sulle righe vuote, firma, compila da profili, riconoscendo i campi sul computer (predefinito) o con Jev. Panoramica utente e struttura dei file in `README.md`. Prima di lavorare su estrazione delle etichette, riconoscimento o profili leggi `DOMINIO.md`: campo, etichetta, intestazione, decisione e dove sbaglia ciascun passo.
+Desktop PDF viewer (Electron + pdf.js + pdf-lib, TypeScript with Vite): fills in forms, writes on blank lines, signs, fills from profiles, recognising the fields on the computer (default) or with Jev. User overview and file structure in `README.md`. Before working on label extraction, recognition or profiles read `DOMAIN.md`: field, label, heading, decision and where each step goes wrong.
 
-## Comandi
+## Commands
 
-- `npm run setup` al primo clone: `~/.npmrc` ha `ignore-scripts=true`, il binario di Electron va scaricato a parte.
-- Verifica dopo ogni modifica: `npx tsc --noEmit`, `npm test` (node `--experimental-strip-types`, solo `tests/*.test.ts`), `npx vite build`.
-- `npm run dev` per provare a mano; `npm run install:linux` ricompila e installa in `~/.local/opt/hushfill` (prima controlla che l'app installata non sia aperta).
+- `npm run setup` on first clone: `~/.npmrc` has `ignore-scripts=true`, the Electron binary must be downloaded separately.
+- Verify after every change: `npx tsc --noEmit`, `npm test` (node `--experimental-strip-types`, only `tests/*.test.ts`), `npx vite build`.
+- `npm run dev` to try things by hand; `npm run install:linux` rebuilds and installs into `~/.local/opt/hushfill` (first check that the installed app is not open).
 
-## Invarianti
+## Invariants
 
-- A Jev vanno solo descrizioni dei campi e intestazioni del profilo, mai valori né firme: l'abbinamento intestazione → valore avviene in locale (`src/autofill-dialog.ts`). Ogni modifica a `src/jev.ts` mantiene i test che lo verificano.
-- La chiave di Jev vive solo nel processo principale (`electron/main.cjs`), cifrata con `safeStorage` in `jev.enc`; il renderer sa solo se esiste. Niente segreti in chiaro: niente `.env`, niente fallback `basic_text`.
-- Il salvataggio propone sempre `nome-firmato.pdf` e non tocca l'originale.
-- La chiave di `safeStorage` è legata al nome dell'app: cambiare `productName` rende illeggibili profili e chiave di Jev. L'import dal vecchio nome è in `electron/main.cjs` (migrazione da PDF Firma).
-- Le firme sono sempre PNG: `src/export.ts` incorpora solo PNG.
-- Il riconoscimento sul computer (`src/local-recognizer.ts`) non fa chiamate di rete e produce le stesse `FieldDecision` di Jev: la revisione non sa quale motore ha lavorato. La conoscenza sta tutta in `data/recognizer.json` (esempi, alias, abbreviazioni, soglie): un caso riconosciuto male si corregge con un esempio, non con codice; il codice resta generico (normalizzazione, somiglianza a trigrammi, scelta). Un caso nuovo va prima in `tests/local-recognizer.test.ts`.
-- I test girano con `--experimental-strip-types`, che non risolve import senza estensione: un modulo di `src/` che importa *valori* da un altro modulo testato lo importa con `.ts` (`allowImportingTsExtensions`); gli `import type` vanno bene senza.
+- Only field descriptions and profile headings go to Jev, never values or signatures: the heading → value matching happens locally (`src/autofill-dialog.ts`). Every change to `src/jev.ts` keeps the tests that verify this.
+- The Jev key lives only in the main process (`electron/main.cjs`), encrypted with `safeStorage` in `jev.enc`; the renderer only knows whether it exists. No secrets in plain text: no `.env`, no `basic_text` fallback.
+- Saving always proposes `name-firmato.pdf` and does not touch the original.
+- The `safeStorage` key is tied to the app's name: changing `productName` makes the profiles and the Jev key unreadable. The import from the old name is in `electron/main.cjs` (migration from PDF Firma).
+- Signatures are always PNG: `src/export.ts` embeds only PNG.
+- Recognition on the computer (`src/local-recognizer.ts`) makes no network calls and produces the same `FieldDecision`s as Jev: the review does not know which engine did the work. All the knowledge lives in `data/recognizer.json` (examples, aliases, abbreviations, thresholds): a case recognised wrongly is fixed with an example, not with code; the code stays generic (normalisation, trigram similarity, choice). A new case goes into `tests/local-recognizer.test.ts` first.
+- Tests run with `--experimental-strip-types`, which does not resolve imports without an extension: a module in `src/` that imports *values* from another tested module imports it with `.ts` (`allowImportingTsExtensions`); `import type` is fine without.
 
-## Trappole di pdf.js e pdf-lib
+## pdf.js and pdf-lib pitfalls
 
-- `PDFViewer` vuole `globalThis.pdfjsLib` impostato prima dell'import dinamico di `pdf_viewer.mjs`, e un `div` come contenitore.
-- `PDFPageView.reset()` toglie i nodi estranei dalla pagina: lo strato di firme e testi si ricrea a ogni `pagerendered`.
-- In v6 non esistono `convertToViewportRectangle` né `increaseScale({maxScale})`; i tracciati arrivano come `constructPath` con buffer `DrawOPS` già trasformato dall'ottimizzatore (vedi `src/drawn-lines.ts`).
-- `saveDocument()` solo se `annotationStorage.size > 0`, altrimenti `getData()`.
-- Prima di `form.removeField` di pdf-lib vanno tolti i widget da `/Annots` di tutte le pagine (`detachWidgets`), o la pagina punta a un oggetto cancellato.
+- `PDFViewer` wants `globalThis.pdfjsLib` set before the dynamic import of `pdf_viewer.mjs`, and a `div` as container.
+- `PDFPageView.reset()` removes foreign nodes from the page: the layer of signatures and text is recreated on every `pagerendered`.
+- In v6 neither `convertToViewportRectangle` nor `increaseScale({maxScale})` exists; paths arrive as `constructPath` with a `DrawOPS` buffer already transformed by the optimiser (see `src/drawn-lines.ts`).
+- `saveDocument()` only if `annotationStorage.size > 0`, otherwise `getData()`.
+- Before pdf-lib's `form.removeField` the widgets must be removed from `/Annots` of every page (`detachWidgets`), or the page points to a deleted object.
 
-## Prove a runtime
+## Runtime tests
 
-- Playwright `_electron` dall'installazione globale di `@playwright/cli`; screenshot con `webContents.capturePage()`, quelli di Playwright si bloccano su Wayland.
-- Jev si prova con un server finto locale (`TYPESAFE_BASE_URL=http://127.0.0.1:...`, http ammesso solo verso localhost) e un `--user-data-dir` dedicato, mai le cartelle dati reali `~/.config/Hushfill` e `~/.config/PDF Firma`.
-- Riconoscimento sbagliato con il vero Jev: `HUSHFILL_DEBUG_JEV=1` stampa domande e risposte dal processo principale. Le descrizioni delle intestazioni predefinite finiscono nei criteri: non devono suggerire una scelta per un campo specifico.
-- `asar extract-file` scrive nella cartella corrente: mai lanciarlo dalla radice del progetto, sovrascrive `index.html`.
+- Playwright `_electron` from the global installation of `@playwright/cli`; screenshots with `webContents.capturePage()`, Playwright's own hang on Wayland.
+- Jev is tested with a fake local server (`TYPESAFE_BASE_URL=http://127.0.0.1:...`, http allowed only towards localhost) and a dedicated `--user-data-dir`, never the real data folders `~/.config/Hushfill` and `~/.config/PDF Firma`.
+- Wrong recognition with the real Jev: `HUSHFILL_DEBUG_JEV=1` prints questions and answers from the main process. The descriptions of the default headings end up in the criteria: they must not suggest a choice for a specific field.
+- `asar extract-file` writes into the current folder: never run it from the project root, it overwrites `index.html`.

@@ -38,7 +38,7 @@ On Linux the keyring is chosen at startup by looking at the D-Bus session bus, n
 
 It is the default engine and needs no configuration. It compares the text printed near the field with examples ("C.F." → tax code, "nato/a a" → place of birth, "Luogo e data" → town and today's date, "PEC" → none) and with the labels of the profile headings, and proposes the most similar answer. Similarity works on groups of three characters, so it copes with abbreviations, typos and words in a different order ("Patente n." → "Numero patente"); abbreviations and gendered forms are expanded before comparing. The final parts of the label, those closest to the field, are compared: in "Il sottoscritto ____ nato a ____" the second line is the place of birth. Headings you create work without examples, from their label alone, and a label with several parts joined by "e" (and), a comma or a slash becomes a combined field. An AcroForm field shorter than a piece of information's minimum length excludes it: a 2-character field is not a tax code.
 
-All the knowledge lives in `data/recognizer.json`: examples, heading labels that inherit them, abbreviations, thresholds. A case recognised wrongly is fixed by adding an example, not code; a longer, more specific example beats a short one ("rilasciato il", issued on → none, against "il" → date of birth). The percentages in the review are similarities, not probabilities calibrated on real forms (see `docs/validazione-riconoscimento.md`).
+All the knowledge lives in `data/recognizer.json`: examples, heading labels that inherit them, abbreviations, thresholds. A case recognised wrongly is fixed by adding an example, not code; a longer, more specific example beats a short one ("rilasciato il", issued on → none, against "il" → date of birth). The percentages in the review are similarities, not probabilities calibrated on real forms (see `docs/recognition-validation.md`).
 
 ### Setting up Jev
 
@@ -99,4 +99,4 @@ Packages: `npm run dist:linux` (AppImage, deb, pacman), `npm run dist:win` (NSIS
 - `src/autofill-dialog.ts`: review of the proposals and local matching to the values.
 - `src/placements.ts`, `src/export.ts`: signatures and text on the page and burning them into the PDF.
 - `src/profiles.ts`, `src/profile-dialog.ts`, `src/signature-dialog.ts`: profiles and signatures.
-- `docs/validazione-riconoscimento.md`: a plan, not yet carried out, to measure recognition with the real Jev on forms with an expected answer.
+- `docs/recognition-validation.md`: a plan, not yet carried out, to measure recognition with the real Jev on forms with an expected answer.
