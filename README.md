@@ -1,100 +1,102 @@
 # Hushfill
 
-Visualizzatore PDF desktop, semplice: compila i moduli, scrive sulle righe vuote dei moduli "da stampare", aggiunge testo libero e firma. Con i profili salvati riconosce i campi da compilare, sul computer o tramite Jev, e li riempie con i tuoi dati. Linux, Windows e macOS (Electron).
+A simple desktop PDF viewer that fills in forms, writes on the blank lines of print-and-fill forms, adds free text and signs. With saved profiles it recognises which fields to fill, either on the computer or through Jev, and fills them with your data. Linux, Windows and macOS (Electron).
 
-## Cosa fa
+The interface is in Italian and so are the forms it is tuned for (Italian tax code, "nato/a a", "Luogo e data"). Interface labels are quoted below in Italian, with their meaning.
 
-- Apre i PDF da doppio clic, "Apri con", riga di comando o trascinandoli nella finestra; un secondo PDF apre una nuova finestra.
-- Compila i campi dei moduli PDF veri (AcroForm).
-- Sui moduli senza campi (righe `_____` o `.....` stampate nel testo) scrive sopra la riga.
-- Testo libero: "Testo", clic sulla pagina, scrivi; doppio clic per modificare, trascina per spostare, quadratino blu per il corpo, Canc per eliminare.
-- Firma disegnata, scritta in corsivo o importata da immagine (PNG, JPG, WebP, GIF, BMP, SVG, anche trascinandola nella finestra), posizionabile e ridimensionabile; ogni profilo può avere la sua. Di una firma scansionata o fotografata lo sfondo chiaro diventa trasparente (si può disattivare) e i margini vuoti vengono ritagliati.
-- Salva sempre una copia `nome-firmato.pdf`: l'originale non viene toccato. Firme e testi vengono incisi nella pagina.
+## What it does
 
-## Profili e compilazione automatica
+- Opens PDFs by double click, "Open with", the command line or by dropping them on the window; a second PDF opens a new window.
+- Fills the fields of real PDF forms (AcroForm).
+- On forms without fields (`_____` or `.....` lines printed in the text) it writes over the line.
+- Free text: "Testo" (Text), click on the page, type; double click to edit, drag to move, the blue square to resize, Delete to remove.
+- Signature drawn, typed in cursive or imported from an image (PNG, JPG, WebP, GIF, BMP, SVG, also by dropping it on the window), which can be placed and resized; each profile can have its own. For a scanned or photographed signature the light background becomes transparent (this can be turned off) and the empty margins are cropped.
+- Always saves a copy, `name-firmato.pdf`: the original is never touched. Signatures and text are burnt into the page.
 
-"Profili" apre l'elenco dei profili. I campi del profilo (intestazioni come "Codice fiscale", con una descrizione facoltativa) sono comuni a tutti i profili e si aggiungono o tolgono liberamente; ogni profilo ha i suoi valori e la sua firma. "Data di oggi" è automatico: non si salva, vale sempre la data del giorno in cui compili (gg/mm/aaaa); si può rinominare o eliminare. Non serve un campo "Nome e cognome": si compone da Nome e Cognome (vedi sotto); i profili salvati con la versione precedente lo perdono all'apertura.
+## Profiles and automatic filling
 
-"Compila":
+"Profili" (Profiles) opens the list of profiles. The profile fields (headings such as "Codice fiscale", the Italian tax code, with an optional description) are shared by all profiles and can be added or removed freely; each profile has its own values and its own signature. "Data di oggi" (today's date) is automatic: it is not saved and always holds the date of the day you fill the form (dd/mm/yyyy); it can be renamed or deleted. No "full name" field is needed: it is composed from first name and surname (see below); profiles saved with the previous version lose it when opened.
 
-1. legge i campi del PDF e le righe vuote, con il testo stampato accanto;
-2. riconosce quale intestazione serve a ciascun campo, con il motore scelto in "Impostazioni" (vedi sotto). Il predefinito è **sul computer**: niente esce dal computer, nemmeno il testo del modulo. Il resto di questo elenco descrive Jev; il motore locale arriva allo stesso risultato da solo, compresi i campi combinati;
-3. con Jev: manda **solo** queste descrizioni e le **intestazioni** dei campi del profilo; Jev risponde quale intestazione serve a ciascun campo (o "firma", "nessuna", oppure "più informazioni insieme");
-4. per i campi con più informazioni insieme ("Il sottoscritto", "Luogo e data") una seconda richiesta chiede, intestazione per intestazione, se fa parte del campo (sì da 0,5 in su); le parti si scrivono nell'ordine in cui il modulo le nomina ("Cognome e nome") se le nomina tutte, altrimenti in quello del profilo, separate da uno spazio, con una virgola prima di una data ("Parma, 03/11/2026"). Se una parte manca nel profilo il valore resta vuoto e la revisione dice quale;
-5. l'associazione intestazione → valore avviene in locale: i valori del profilo non lasciano mai il computer;
-6. una finestra mostra le proposte: puoi correggere l'informazione, il valore, o escludere un campo prima di scrivere.
+"Compila" (Fill):
 
-Nella revisione puoi far crescere il profilo mentre compili. Se un campo riconosciuto non ha valore nel profilo attivo e ne scrivi uno, "salva nel profilo" (spuntato di default) lo memorizza. Se scrivi un valore in un campo che il riconoscimento non ha associato a niente, la riga diventa "nuovo campo del profilo", con un nome proposto dal testo stampato accanto, che puoi correggere: confermando, il campo si aggiunge alle intestazioni (per tutti i profili) e il valore al profilo attivo. Un campo nuovo con il nome di uno esistente non si duplica, e un valore già presente nel profilo non viene mai sovrascritto da qui.
+1. reads the PDF's fields and blank lines, with the text printed next to them;
+2. recognises which heading each field needs, with the engine chosen in "Impostazioni" (Settings, see below). The default is **on the computer**: nothing leaves the computer, not even the form's text. The rest of this list describes Jev; the local engine reaches the same result on its own, combined fields included;
+3. with Jev: it sends **only** these descriptions and the **headings** of the profile fields; Jev answers which heading each field needs (or "signature", "none", or "several pieces of information together");
+4. for fields with several pieces of information together ("Il sottoscritto", the undersigned; "Luogo e data", place and date) a second request asks, heading by heading, whether it belongs to the field (yes from 0.5 up); the parts are written in the order the form names them ("Cognome e nome", surname and name) if it names all of them, otherwise in the profile's order, separated by a space, with a comma before a date ("Parma, 03/11/2026"). If a part is missing from the profile the value stays empty and the review says which one;
+5. the heading → value matching happens locally: profile values never leave the computer;
+6. a window shows the proposals: you can correct the information, the value, or exclude a field before writing.
 
-I profili sono salvati cifrati con il portachiavi di sistema (`safeStorage` di Electron: Secret Service o KWallet su Linux, DPAPI su Windows, Portachiavi su macOS) in `profiles.enc` nella cartella dati dell'app (`~/.config/Hushfill` su Linux).
+In the review you can grow the profile while you fill. If a recognised field has no value in the active profile and you type one, "salva nel profilo" (save to profile, checked by default) stores it. If you type a value in a field that recognition did not match to anything, the row becomes "nuovo campo del profilo" (new profile field), with a name suggested from the printed text next to it, which you can correct: on confirmation the field is added to the headings (for all profiles) and the value to the active profile. A new field with the name of an existing one is not duplicated, and a value already in the profile is never overwritten from here.
 
-L'app prima si chiamava PDF Firma. Al primo avvio Hushfill importa profili e chiave di Jev dalla vecchia cartella (`~/.config/PDF Firma`): la chiave di cifratura è legata al nome dell'app, quindi li fa leggere a un processo avviato col nome vecchio e li ricifra con la sua, senza scriverli in chiaro su disco. La vecchia cartella resta com'è; dopo aver controllato i profili si possono cancellare lei e la voce "PDF Firma Safe Storage" del portachiavi.
+Profiles are stored encrypted with the system keyring (Electron's `safeStorage`: Secret Service or KWallet on Linux, DPAPI on Windows, Keychain on macOS) in `profiles.enc` in the app's data folder (`~/.config/Hushfill` on Linux).
 
-Su Linux il portachiavi si sceglie all'avvio guardando il bus di sessione D-Bus, non il nome del desktop: un servizio Secret Service in esecuzione (gnome-keyring, KeePassXC, KWallet recente) vince su KWallet, uno in esecuzione vince su uno solo attivabile. Serve perché Chromium decide dal desktop e su quelli che non conosce (Hyprland, Sway…) ripiega su una chiave fissa. Se non trova nessun portachiavi l'app non salva in chiaro, e l'errore dice cosa ha cercato. `--password-store=...` da riga di comando ha la precedenza.
+The app used to be called PDF Firma. On first launch Hushfill imports the profiles and the Jev key from the old folder (`~/.config/PDF Firma`): the encryption key is tied to the app's name, so it has them read by a process started under the old name and re-encrypts them with its own, without writing them to disk in plain text. The old folder stays as it is; after checking the profiles you can delete it and the "PDF Firma Safe Storage" keyring entry.
 
-### Riconoscimento sul computer
+On Linux the keyring is chosen at startup by looking at the D-Bus session bus, not at the desktop's name: a running Secret Service (gnome-keyring, KeePassXC, recent KWallet) wins over KWallet, and a running one wins over one that can only be activated. This is needed because Chromium decides from the desktop, and on desktops it does not know (Hyprland, Sway…) it falls back to a fixed key. If no keyring is found the app does not save in plain text, and the error says what it looked for. `--password-store=...` on the command line takes precedence.
 
-È il motore predefinito e non richiede configurazione. Confronta il testo stampato vicino al campo con degli esempi ("C.F." → codice fiscale, "nato/a a" → luogo di nascita, "Luogo e data" → comune e data di oggi, "PEC" → nessuna) e con le etichette delle intestazioni del profilo, e propone la risposta più somigliante. La somiglianza è sui gruppi di tre caratteri, quindi regge sigle, refusi e parole in ordine diverso ("Patente n." → "Numero patente"); prima del confronto sigle e forme di genere vengono sciolte. Si confrontano le parti finali dell'etichetta, le più vicine al campo: su "Il sottoscritto ____ nato a ____" la seconda riga è il luogo di nascita. Le intestazioni create da te funzionano senza esempi, con la loro sola etichetta, e un'etichetta con più parti unite da "e", virgola o barra diventa un campo combinato. Un campo AcroForm più corto del minimo di un'informazione la esclude: un campo da 2 caratteri non è un codice fiscale.
+### Recognition on the computer
 
-Tutta la conoscenza sta in `data/recognizer.json`: esempi, etichette di intestazione che li ereditano, abbreviazioni, soglie. Per un caso riconosciuto male si aggiunge un esempio, non codice; un esempio più lungo e specifico vince su uno corto ("rilasciato il" → nessuna, contro "il" → data di nascita). Le percentuali della revisione sono somiglianze, non probabilità calibrate su moduli veri (vedi `docs/validazione-riconoscimento.md`).
+It is the default engine and needs no configuration. It compares the text printed near the field with examples ("C.F." → tax code, "nato/a a" → place of birth, "Luogo e data" → town and today's date, "PEC" → none) and with the labels of the profile headings, and proposes the most similar answer. Similarity works on groups of three characters, so it copes with abbreviations, typos and words in a different order ("Patente n." → "Numero patente"); abbreviations and gendered forms are expanded before comparing. The final parts of the label, those closest to the field, are compared: in "Il sottoscritto ____ nato a ____" the second line is the place of birth. Headings you create work without examples, from their label alone, and a label with several parts joined by "e" (and), a comma or a slash becomes a combined field. An AcroForm field shorter than a piece of information's minimum length excludes it: a 2-character field is not a tax code.
 
-### Configurare Jev
+All the knowledge lives in `data/recognizer.json`: examples, heading labels that inherit them, abbreviations, thresholds. A case recognised wrongly is fixed by adding an example, not code; a longer, more specific example beats a short one ("rilasciato il", issued on → none, against "il" → date of birth). The percentages in the review are similarities, not probabilities calibrated on real forms (see `docs/validazione-riconoscimento.md`).
 
-Per usarlo va scelto in "Impostazioni", alla voce "Riconoscimento". Nella stessa finestra: si incolla la chiave da console.typesafe.ai, "Prova connessione" la verifica con una domanda banale senza dati personali, "Salva" la cifra col portachiavi in `jev.enc` nella cartella dati dell'app. La chiave salvata non viene più mostrata né rimandata all'interfaccia; "Rimuovi chiave" la cancella.
+### Setting up Jev
 
-Nella stessa finestra si cambiano il modello (default `jev-1.14.0`, fissato perché l'alias `jev-latest` cambia a ogni rilascio) e il server (default `https://api.typesafe.ai`; per un server compatibile come jevos in locale). Il server deve usare https, http solo verso localhost, perché la chiave viaggia nell'header.
+To use it, choose it in "Impostazioni" (Settings), under "Riconoscimento" (Recognition). In the same window: paste the key from console.typesafe.ai, "Prova connessione" (test connection) checks it with a trivial question carrying no personal data, and "Salva" (Save) encrypts it with the keyring in `jev.enc` in the app's data folder. The saved key is never shown again nor sent back to the interface; "Rimuovi chiave" (remove key) deletes it.
 
-In sviluppo le variabili d'ambiente `TYPESAFE_API_KEY`, `TYPESAFE_MODEL` e `TYPESAFE_BASE_URL`, se impostate, hanno la precedenza sui valori salvati; la finestra lo segnala.
+The same window changes the model (default `jev-1.14.0`, pinned because the `jev-latest` alias changes with every release) and the server (default `https://api.typesafe.ai`; set it for a compatible server such as a local jevos). The server must use https, or http only towards localhost, because the key travels in a header.
 
-Per capire perché un campo è stato riconosciuto male, lancia l'app dal terminale con `HUSHFILL_DEBUG_JEV=1` (per esempio `HUSHFILL_DEBUG_JEV=1 ~/.local/opt/hushfill/hushfill modulo.pdf`): ogni domanda a Jev viene stampata con la sua risposta. Ci sono solo testo del modulo e intestazioni, mai valori del profilo né la chiave.
+In development the environment variables `TYPESAFE_API_KEY`, `TYPESAFE_MODEL` and `TYPESAFE_BASE_URL`, when set, take precedence over the saved values; the window says so.
 
-## Sviluppo
+To understand why a field was recognised wrongly, start the app from a terminal with `HUSHFILL_DEBUG_JEV=1` (for example `HUSHFILL_DEBUG_JEV=1 ~/.local/opt/hushfill/hushfill form.pdf`): every question to Jev is printed with its answer. They hold only the form's text and the headings, never profile values or the key.
+
+## Development
 
 ```sh
-npm run setup     # npm install + download del binario Electron
-npm run dev       # Vite con hot reload + Electron (npm run dev -- ~/doc.pdf)
-npm start         # build e avvio
-npm test          # test unitari (richiesta Jev, riconoscimento sul computer, righe disegnate, scelta del portachiavi)
+npm run setup     # npm install + download of the Electron binary
+npm run dev       # Vite with hot reload + Electron (npm run dev -- ~/doc.pdf)
+npm start         # build and start
+npm test          # unit tests (Jev request, on-computer recognition, drawn lines, keyring choice)
 npm run typecheck
 ```
 
-`setup` scarica Electron a parte perché con `ignore-scripts=true` in `~/.npmrc` lo script di installazione del pacchetto non parte.
+`setup` downloads Electron separately because with `ignore-scripts=true` in `~/.npmrc` the package's install script does not run.
 
-## Installazione
+## Installation
 
-Linux, per l'utente corrente (nessun sudo):
+Linux, for the current user (no sudo):
 
 ```sh
 npm run install:linux
-xdg-mime default hushfill.desktop application/pdf   # facoltativo: lettore PDF predefinito
+xdg-mime default hushfill.desktop application/pdf   # optional: default PDF reader
 ```
 
-Copia l'app in `~/.local/opt/hushfill`, crea `~/.local/bin/hushfill` e la voce di menu registrata per `application/pdf`. Toglie la vecchia installazione di PDF Firma, se c'è, e se era il lettore PDF predefinito lo passa a Hushfill.
+It copies the app to `~/.local/opt/hushfill`, creates `~/.local/bin/hushfill` and the menu entry registered for `application/pdf`. It removes the old PDF Firma installation, if present, and if that was the default PDF reader it hands the role to Hushfill.
 
-Pacchetti: `npm run dist:linux` (AppImage, deb, pacman), `npm run dist:win` (installer NSIS), `npm run dist:mac` (dmg, va eseguito su macOS). Escono in `release/`.
+Packages: `npm run dist:linux` (AppImage, deb, pacman), `npm run dist:win` (NSIS installer), `npm run dist:mac` (dmg, must run on macOS). They land in `release/`.
 
-## Limiti noti
+## Known limits
 
-- La firma è un'immagine (firma grafica), non una firma digitale con certificato (PAdES).
-- Le righe vuote si riconoscono sia come caratteri (`____`, `.....`) sia come linee disegnate (segmenti, rettangoli sottili, puntini). Si scartano i lati di tabelle e riquadri, il testo sottolineato e i separatori lunghi quasi quanto la pagina; le caselle disegnate (riquadri da riempire) non vengono proposte. Le scansioni senza testo non vengono riconosciute: si compilano con "Testo".
-- Caselle di spunta, pulsanti di scelta e menu a tendina non vengono compilati automaticamente.
-- PDF cifrati: si aprono e si compilano i campi, ma firme e testi aggiunti non possono essere incisi.
+- The signature is an image (a graphic signature), not a digital signature with a certificate (PAdES).
+- Blank lines are recognised both as characters (`____`, `.....`) and as drawn lines (segments, thin rectangles, dots). The sides of tables and boxes, underlined text and separators almost as long as the page are discarded; drawn boxes (squares to fill in) are not proposed. Scans without text are not recognised: fill them with "Testo".
+- Checkboxes, radio buttons and drop-down menus are not filled automatically.
+- Encrypted PDFs: they open and their fields can be filled, but added signatures and text cannot be burnt in.
 
-## Struttura
+## Structure
 
-- `electron/main.cjs`: finestre, apertura file da sistema, salvataggio, profili cifrati, chiamate a Jev.
-- `electron/preload.cjs`: ponte minimo verso l'interfaccia.
-- `src/viewer.ts`: pdf.js (visualizzazione, zoom, moduli).
-- `electron/keyring.cjs`: scelta del portachiavi su Linux dal bus D-Bus.
-- `src/form-fields.ts`: estrazione di campi AcroForm e righe vuote con il loro contesto.
-- `src/field-labels.ts`: etichetta di un campo dal testo stampato vicino (a sinistra, anche sotto un campo messo sopra i trattini; sopra, fino in fondo alla riga se il campo va a capo; sotto).
-- `src/drawn-lines.ts`: righe disegnate come grafica, dalla lista di operatori di pdf.js.
-- `src/settings-dialog.ts`: finestra Impostazioni: motore di riconoscimento e Jev.
-- `src/recognition-engine.ts`: motore scelto (sul computer o Jev), salvato nel `localStorage`.
-- `src/local-recognizer.ts`: riconoscimento sul computer: normalizzazione, somiglianza con gli esempi, campi combinati.
-- `data/recognizer.json`: esempi, alias, abbreviazioni e soglie del riconoscimento sul computer.
-- `src/jev.ts`: costruzione della richiesta a Jev e lettura della risposta.
-- `src/autofill-dialog.ts`: revisione delle proposte e associazione locale ai valori.
-- `src/placements.ts`, `src/export.ts`: firme e testi sulla pagina e loro incisione nel PDF.
-- `src/profiles.ts`, `src/profile-dialog.ts`, `src/signature-dialog.ts`: profili e firme.
-- `docs/validazione-riconoscimento.md`: piano, non ancora fatto, per misurare il riconoscimento con il vero Jev su moduli con risposta attesa.
+- `electron/main.cjs`: windows, opening files from the system, saving, encrypted profiles, calls to Jev.
+- `electron/preload.cjs`: minimal bridge to the interface.
+- `src/viewer.ts`: pdf.js (display, zoom, forms).
+- `electron/keyring.cjs`: choice of the keyring on Linux from the D-Bus bus.
+- `src/form-fields.ts`: extraction of AcroForm fields and blank lines with their context.
+- `src/field-labels.ts`: a field's label from the text printed near it (to the left, also under a field placed above the dashes; above, up to the end of the line if the field wraps; below).
+- `src/drawn-lines.ts`: lines drawn as graphics, from pdf.js's operator list.
+- `src/settings-dialog.ts`: Settings window: recognition engine and Jev.
+- `src/recognition-engine.ts`: chosen engine (on the computer or Jev), saved in `localStorage`.
+- `src/local-recognizer.ts`: recognition on the computer: normalisation, similarity with the examples, combined fields.
+- `data/recognizer.json`: examples, aliases, abbreviations and thresholds of the on-computer recognition.
+- `src/jev.ts`: building the request to Jev and reading the answer.
+- `src/autofill-dialog.ts`: review of the proposals and local matching to the values.
+- `src/placements.ts`, `src/export.ts`: signatures and text on the page and burning them into the PDF.
+- `src/profiles.ts`, `src/profile-dialog.ts`, `src/signature-dialog.ts`: profiles and signatures.
+- `docs/validazione-riconoscimento.md`: a plan, not yet carried out, to measure recognition with the real Jev on forms with an expected answer.
