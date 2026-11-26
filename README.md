@@ -1,6 +1,6 @@
 # Hushfill
 
-Visualizzatore PDF desktop, semplice: compila i moduli, scrive sulle righe vuote dei moduli "da stampare", aggiunge testo libero e firma. Con i profili salvati riconosce i campi da compilare tramite Jev e li riempie con i tuoi dati. Linux, Windows e macOS (Electron).
+Visualizzatore PDF desktop, semplice: compila i moduli, scrive sulle righe vuote dei moduli "da stampare", aggiunge testo libero e firma. Con i profili salvati riconosce i campi da compilare, sul computer o tramite Jev, e li riempie con i tuoi dati. Linux, Windows e macOS (Electron).
 
 ## Cosa fa
 
@@ -18,12 +18,13 @@ Visualizzatore PDF desktop, semplice: compila i moduli, scrive sulle righe vuote
 "Compila":
 
 1. legge i campi del PDF e le righe vuote, con il testo stampato accanto;
-2. manda a Jev **solo** queste descrizioni e le **intestazioni** dei campi del profilo; Jev risponde quale intestazione serve a ciascun campo (o "firma", "nessuna", oppure "più informazioni insieme");
-3. per i campi con più informazioni insieme ("Il sottoscritto", "Luogo e data") una seconda richiesta chiede, intestazione per intestazione, se fa parte del campo (sì da 0,5 in su); le parti si scrivono nell'ordine in cui il modulo le nomina ("Cognome e nome") se le nomina tutte, altrimenti in quello del profilo, separate da uno spazio, con una virgola prima di una data ("Parma, 03/11/2026"). Se una parte manca nel profilo il valore resta vuoto e la revisione dice quale;
-4. l'associazione intestazione → valore avviene in locale: i valori del profilo non lasciano mai il computer;
-5. una finestra mostra le proposte: puoi correggere l'informazione, il valore, o escludere un campo prima di scrivere.
+2. riconosce quale intestazione serve a ciascun campo, con il motore scelto in "Impostazioni" (vedi sotto). Il predefinito è **sul computer**: niente esce dal computer, nemmeno il testo del modulo. Il resto di questo elenco descrive Jev; il motore locale arriva allo stesso risultato da solo, compresi i campi combinati;
+3. con Jev: manda **solo** queste descrizioni e le **intestazioni** dei campi del profilo; Jev risponde quale intestazione serve a ciascun campo (o "firma", "nessuna", oppure "più informazioni insieme");
+4. per i campi con più informazioni insieme ("Il sottoscritto", "Luogo e data") una seconda richiesta chiede, intestazione per intestazione, se fa parte del campo (sì da 0,5 in su); le parti si scrivono nell'ordine in cui il modulo le nomina ("Cognome e nome") se le nomina tutte, altrimenti in quello del profilo, separate da uno spazio, con una virgola prima di una data ("Parma, 03/11/2026"). Se una parte manca nel profilo il valore resta vuoto e la revisione dice quale;
+5. l'associazione intestazione → valore avviene in locale: i valori del profilo non lasciano mai il computer;
+6. una finestra mostra le proposte: puoi correggere l'informazione, il valore, o escludere un campo prima di scrivere.
 
-Nella revisione puoi far crescere il profilo mentre compili. Se un campo riconosciuto non ha valore nel profilo attivo e ne scrivi uno, "salva nel profilo" (spuntato di default) lo memorizza. Se scrivi un valore in un campo che Jev non ha associato a niente, la riga diventa "nuovo campo del profilo", con un nome proposto dal testo stampato accanto, che puoi correggere: confermando, il campo si aggiunge alle intestazioni (per tutti i profili) e il valore al profilo attivo. Un campo nuovo con il nome di uno esistente non si duplica, e un valore già presente nel profilo non viene mai sovrascritto da qui.
+Nella revisione puoi far crescere il profilo mentre compili. Se un campo riconosciuto non ha valore nel profilo attivo e ne scrivi uno, "salva nel profilo" (spuntato di default) lo memorizza. Se scrivi un valore in un campo che il riconoscimento non ha associato a niente, la riga diventa "nuovo campo del profilo", con un nome proposto dal testo stampato accanto, che puoi correggere: confermando, il campo si aggiunge alle intestazioni (per tutti i profili) e il valore al profilo attivo. Un campo nuovo con il nome di uno esistente non si duplica, e un valore già presente nel profilo non viene mai sovrascritto da qui.
 
 I profili sono salvati cifrati con il portachiavi di sistema (`safeStorage` di Electron: Secret Service o KWallet su Linux, DPAPI su Windows, Portachiavi su macOS) in `profiles.enc` nella cartella dati dell'app (`~/.config/Hushfill` su Linux).
 
@@ -31,9 +32,15 @@ L'app prima si chiamava PDF Firma. Al primo avvio Hushfill importa profili e chi
 
 Su Linux il portachiavi si sceglie all'avvio guardando il bus di sessione D-Bus, non il nome del desktop: un servizio Secret Service in esecuzione (gnome-keyring, KeePassXC, KWallet recente) vince su KWallet, uno in esecuzione vince su uno solo attivabile. Serve perché Chromium decide dal desktop e su quelli che non conosce (Hyprland, Sway…) ripiega su una chiave fissa. Se non trova nessun portachiavi l'app non salva in chiaro, e l'errore dice cosa ha cercato. `--password-store=...` da riga di comando ha la precedenza.
 
+### Riconoscimento sul computer
+
+È il motore predefinito e non richiede configurazione. Confronta il testo stampato vicino al campo con degli esempi ("C.F." → codice fiscale, "nato/a a" → luogo di nascita, "Luogo e data" → comune e data di oggi, "PEC" → nessuna) e con le etichette delle intestazioni del profilo, e propone la risposta più somigliante. La somiglianza è sui gruppi di tre caratteri, quindi regge sigle, refusi e parole in ordine diverso ("Patente n." → "Numero patente"); prima del confronto sigle e forme di genere vengono sciolte. Si confrontano le parti finali dell'etichetta, le più vicine al campo: su "Il sottoscritto ____ nato a ____" la seconda riga è il luogo di nascita. Le intestazioni create da te funzionano senza esempi, con la loro sola etichetta, e un'etichetta con più parti unite da "e", virgola o barra diventa un campo combinato. Un campo AcroForm più corto del minimo di un'informazione la esclude: un campo da 2 caratteri non è un codice fiscale.
+
+Tutta la conoscenza sta in `data/recognizer.json`: esempi, etichette di intestazione che li ereditano, abbreviazioni, soglie. Per un caso riconosciuto male si aggiunge un esempio, non codice; un esempio più lungo e specifico vince su uno corto ("rilasciato il" → nessuna, contro "il" → data di nascita). Le percentuali della revisione sono somiglianze, non probabilità calibrate su moduli veri (vedi `docs/validazione-riconoscimento.md`).
+
 ### Configurare Jev
 
-"Impostazioni" nella barra: si incolla la chiave da console.typesafe.ai, "Prova connessione" la verifica con una domanda banale senza dati personali, "Salva" la cifra col portachiavi in `jev.enc` nella cartella dati dell'app. La chiave salvata non viene più mostrata né rimandata all'interfaccia; "Rimuovi chiave" la cancella.
+Per usarlo va scelto in "Impostazioni", alla voce "Riconoscimento". Nella stessa finestra: si incolla la chiave da console.typesafe.ai, "Prova connessione" la verifica con una domanda banale senza dati personali, "Salva" la cifra col portachiavi in `jev.enc` nella cartella dati dell'app. La chiave salvata non viene più mostrata né rimandata all'interfaccia; "Rimuovi chiave" la cancella.
 
 Nella stessa finestra si cambiano il modello (default `jev-1.14.0`, fissato perché l'alias `jev-latest` cambia a ogni rilascio) e il server (default `https://api.typesafe.ai`; per un server compatibile come jevos in locale). Il server deve usare https, http solo verso localhost, perché la chiave viaggia nell'header.
 
@@ -47,7 +54,7 @@ Per capire perché un campo è stato riconosciuto male, lancia l'app dal termina
 npm run setup     # npm install + download del binario Electron
 npm run dev       # Vite con hot reload + Electron (npm run dev -- ~/doc.pdf)
 npm start         # build e avvio
-npm test          # test unitari (richiesta Jev, righe disegnate, scelta del portachiavi)
+npm test          # test unitari (richiesta Jev, riconoscimento sul computer, righe disegnate, scelta del portachiavi)
 npm run typecheck
 ```
 
@@ -80,8 +87,12 @@ Pacchetti: `npm run dist:linux` (AppImage, deb, pacman), `npm run dist:win` (ins
 - `src/viewer.ts`: pdf.js (visualizzazione, zoom, moduli).
 - `electron/keyring.cjs`: scelta del portachiavi su Linux dal bus D-Bus.
 - `src/form-fields.ts`: estrazione di campi AcroForm e righe vuote con il loro contesto.
+- `src/field-labels.ts`: etichetta di un campo dal testo stampato vicino (a sinistra, anche sotto un campo messo sopra i trattini; sopra, fino in fondo alla riga se il campo va a capo; sotto).
 - `src/drawn-lines.ts`: righe disegnate come grafica, dalla lista di operatori di pdf.js.
-- `src/settings-dialog.ts`: finestra Impostazioni di Jev.
+- `src/settings-dialog.ts`: finestra Impostazioni: motore di riconoscimento e Jev.
+- `src/recognition-engine.ts`: motore scelto (sul computer o Jev), salvato nel `localStorage`.
+- `src/local-recognizer.ts`: riconoscimento sul computer: normalizzazione, somiglianza con gli esempi, campi combinati.
+- `data/recognizer.json`: esempi, alias, abbreviazioni e soglie del riconoscimento sul computer.
 - `src/jev.ts`: costruzione della richiesta a Jev e lettura della risposta.
 - `src/autofill-dialog.ts`: revisione delle proposte e associazione locale ai valori.
 - `src/placements.ts`, `src/export.ts`: firme e testi sulla pagina e loro incisione nel PDF.

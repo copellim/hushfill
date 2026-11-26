@@ -1,6 +1,6 @@
 # Hushfill
 
-Visualizzatore PDF desktop (Electron + pdf.js + pdf-lib, TypeScript con Vite): compila moduli, scrive sulle righe vuote, firma, compila da profili con Jev. Panoramica utente e struttura dei file in `README.md`.
+Visualizzatore PDF desktop (Electron + pdf.js + pdf-lib, TypeScript con Vite): compila moduli, scrive sulle righe vuote, firma, compila da profili, riconoscendo i campi sul computer (predefinito) o con Jev. Panoramica utente e struttura dei file in `README.md`. Prima di lavorare su estrazione delle etichette, riconoscimento o profili leggi `DOMINIO.md`: campo, etichetta, intestazione, decisione e dove sbaglia ciascun passo.
 
 ## Comandi
 
@@ -15,6 +15,8 @@ Visualizzatore PDF desktop (Electron + pdf.js + pdf-lib, TypeScript con Vite): c
 - Il salvataggio propone sempre `nome-firmato.pdf` e non tocca l'originale.
 - La chiave di `safeStorage` è legata al nome dell'app: cambiare `productName` rende illeggibili profili e chiave di Jev. L'import dal vecchio nome è in `electron/main.cjs` (migrazione da PDF Firma).
 - Le firme sono sempre PNG: `src/export.ts` incorpora solo PNG.
+- Il riconoscimento sul computer (`src/local-recognizer.ts`) non fa chiamate di rete e produce le stesse `FieldDecision` di Jev: la revisione non sa quale motore ha lavorato. La conoscenza sta tutta in `data/recognizer.json` (esempi, alias, abbreviazioni, soglie): un caso riconosciuto male si corregge con un esempio, non con codice; il codice resta generico (normalizzazione, somiglianza a trigrammi, scelta). Un caso nuovo va prima in `tests/local-recognizer.test.ts`.
+- I test girano con `--experimental-strip-types`, che non risolve import senza estensione: un modulo di `src/` che importa *valori* da un altro modulo testato lo importa con `.ts` (`allowImportingTsExtensions`); gli `import type` vanno bene senza.
 
 ## Trappole di pdf.js e pdf-lib
 
