@@ -6,17 +6,18 @@
 import { AnnotationMode, OPS, type PDFDocumentProxy, type PDFPageProxy } from "pdfjs-dist";
 import type { TextItem } from "pdfjs-dist/types/src/display/api";
 import { findHorizontalRules, type HorizontalRule } from "./drawn-lines";
+import {
+  BLANK_PATTERN,
+  MAX_LABEL_CHARS,
+  VERTICAL_TOLERANCE,
+  describeSurroundings,
+  withoutBlanks,
+  withoutDuplicates,
+  type PlacedText,
+  type Rect,
+} from "./field-labels";
 import type { FormFieldInfo } from "./jev";
 
-// Distanze in punti PDF entro cui un testo è considerato etichetta del campo.
-const LEFT_REACH = 220;
-const ABOVE_REACH = 26;
-const BELOW_REACH = 16;
-const VERTICAL_TOLERANCE = 3;
-const MAX_LABEL_CHARS = 120;
-// Una riga vuota è una sequenza di trattini bassi o di puntini abbastanza
-// lunga da non essere punteggiatura.
-const BLANK_PATTERN = /_{3,}|\.{5,}|…{2,}/g;
 // Font usato per stimare dove cade la riga vuota dentro una stringa: i
 // moduli usano quasi sempre Helvetica/Arial, e serve solo la proporzione.
 const MEASURE_FONT = "Helvetica, Arial, sans-serif";
@@ -41,16 +42,6 @@ interface WidgetAnnotation {
   rect: number[];
 }
 
-interface PlacedText {
-  text: string;
-  left: number;
-  right: number;
-  bottom: number;
-  top: number;
-}
-
-type Rect = [number, number, number, number];
-
 function toPlacedText(item: TextItem): PlacedText {
   const [, , , , x, y] = item.transform;
   return { text: item.str, left: x, right: x + item.width, bottom: y, top: y + item.height };
@@ -60,71 +51,10 @@ function normalizeRect(rect: number[]): Rect {
   return [Math.min(rect[0], rect[2]), Math.min(rect[1], rect[3]), Math.max(rect[0], rect[2]), Math.max(rect[1], rect[3])];
 }
 
-function overlapsHorizontally(text: PlacedText, x1: number, x2: number): boolean {
-  return text.right > x1 && text.left < x2;
-}
-
-function withoutBlanks(text: string): string {
-  return text.replace(BLANK_PATTERN, " ").replace(/\s+/g, " ").trim();
-}
-
-// Testo sulla stessa riga a sinistra, preso dal più vicino al campo
-// all'indietro: "Il sottoscritto ____ nato a ____" dà "...nato a".
-function textOnTheLeft(texts: PlacedText[], [x1, y1, , y2]: Rect): string {
-  const sameLine = texts
-    .filter((t) => t.right <= x1 + VERTICAL_TOLERANCE && x1 - t.right < LEFT_REACH)
-    .filter((t) => t.top > y1 - VERTICAL_TOLERANCE && t.bottom < y2 + VERTICAL_TOLERANCE)
-    .sort((a, b) => b.right - a.right);
-  let label = "";
-  for (const text of sameLine) {
-    label = `${withoutBlanks(text.text)} ${label}`.trim();
-    if (label.length >= MAX_LABEL_CHARS) {
-      break;
-    }
-  }
-  return label.slice(-MAX_LABEL_CHARS);
-}
-
-// Riga di testo più vicina sopra o sotto il campo, che lo sovrapponga
-// in orizzontale. Restituisce anche la distanza per scegliere la più vicina.
-function lineNear(texts: PlacedText[], [x1, y1, x2, y2]: Rect, where: "above" | "below"): { text: string; distance: number } | null {
-  const candidates = texts
-    .filter((t) => overlapsHorizontally(t, x1, x2))
-    .map((t) => ({ t, distance: where === "above" ? t.bottom - y2 : y1 - t.top }))
-    .filter(({ distance }) => distance >= -VERTICAL_TOLERANCE && distance < (where === "above" ? ABOVE_REACH : BELOW_REACH))
-    .sort((a, b) => a.distance - b.distance);
-  if (candidates.length === 0) {
-    return null;
-  }
-  const nearest = candidates[0].distance;
-  const text = candidates
-    .filter((c) => c.distance - nearest < VERTICAL_TOLERANCE)
-    .sort((a, b) => a.t.left - b.t.left)
-    .map((c) => withoutBlanks(c.t.text))
-    .join(" ")
-    .trim();
-  return text ? { text: text.slice(0, MAX_LABEL_CHARS), distance: nearest } : null;
-}
-
-// Un solo indizio, il più vicino: aggiungere la riga sopra quando c'è già
-// un'etichetta a sinistra confonde (la riga sopra appartiene a un altro campo).
-function describeSurroundings(texts: PlacedText[], rect: Rect): string {
-  const left = textOnTheLeft(texts, rect);
-  if (left) {
-    return `a sinistra: ${left}`;
-  }
-  const above = lineNear(texts, rect, "above");
-  const below = lineNear(texts, rect, "below");
-  const nearest = [above && { ...above, where: "sopra" }, below && { ...below, where: "sotto" }]
-    .filter((c): c is { text: string; distance: number; where: string } => Boolean(c))
-    .sort((a, b) => a.distance - b.distance)[0];
-  return nearest ? `${nearest.where}: ${nearest.text}` : "";
-}
-
 async function readTexts(page: PDFPageProxy): Promise<{ items: TextItem[]; placed: PlacedText[] }> {
   const content = await page.getTextContent();
   const items = content.items.filter((item): item is TextItem => "str" in item && item.str.trim() !== "");
-  return { items, placed: items.map(toPlacedText) };
+  return { items, placed: withoutDuplicates(items.map(toPlacedText)) };
 }
 
 function acroFormFields(widgets: WidgetAnnotation[], texts: PlacedText[], pageIndex: number): FormFieldInfo[] {
