@@ -211,7 +211,7 @@ function buildRow(decision: FieldDecision, store: ProfileStore): { element: HTML
   const confidence = document.createElement("span");
   confidence.className = "autofill-confidence";
   confidence.textContent = decision.target ? `${Math.round(decision.probability * 100)}%` : "";
-  confidence.title = "Probabilità assegnata da Jev alla scelta";
+  confidence.title = "Probabilità stimata per la scelta";
   confidence.classList.toggle("low", decision.probability < AUTO_CHECK_PROBABILITY);
   const row: Row = { decision, checkbox, target, value, newLabel, saveValue, saveValueLabel };
   target.addEventListener("change", () => refreshRow(row, selectedProfile(), true));

@@ -1,0 +1,174 @@
+{
+  "version": 1,
+  "parameters": {
+    "noneThreshold": 0.5,
+    "combinedPartThreshold": 0.6,
+    "shortTailPenalty": 0.15,
+    "maxTailWords": 6,
+    "fieldNameWeight": 0.85,
+    "signatureFieldScore": 0.95
+  },
+  "abbreviations": {
+    "cf": "codice fiscale",
+    "cod": "codice",
+    "fisc": "fiscale",
+    "prov": "provincia",
+    "tel": "telefono",
+    "cell": "cellulare",
+    "nasc": "nascita",
+    "res": "residente",
+    "dom": "domicilio",
+    "ind": "indirizzo",
+    "loc": "localita",
+    "num": "numero",
+    "nr": "numero",
+    "n": "numero",
+    "nata": "nato",
+    "sottoscritta": "sottoscritto"
+  },
+  "targets": [
+    {
+      "id": "nome",
+      "headings": ["nome", "first name", "given name", "nome di battesimo"],
+      "examples": ["nome", "first name", "given name", { "text": "name", "weight": 0.6 }]
+    },
+    {
+      "id": "cognome",
+      "headings": ["cognome", "surname", "last name", "family name"],
+      "examples": ["cognome", "surname", "last name", "family name"]
+    },
+    {
+      "id": "data_nascita",
+      "headings": ["data di nascita", "data nascita", "date of birth", "birth date"],
+      "examples": ["data di nascita", "data nascita", "nato il", "date of birth", "birth date", "dob", { "text": "il", "weight": 0.55 }],
+      "minLength": 6
+    },
+    {
+      "id": "luogo_nascita",
+      "headings": ["luogo di nascita", "luogo nascita", "comune di nascita", "place of birth", "birthplace"],
+      "examples": ["luogo di nascita", "luogo nascita", "comune di nascita", "nato a", "nato in", "place of birth", "birthplace", "born in"]
+    },
+    {
+      "id": "codice_fiscale",
+      "headings": ["codice fiscale", "tax code", "fiscal code"],
+      "examples": ["codice fiscale", "tax code", "fiscal code", { "text": "tax id", "weight": 0.8 }],
+      "minLength": 16
+    },
+    {
+      "id": "indirizzo",
+      "headings": ["indirizzo di residenza", "indirizzo", "via", "address", "street"],
+      "examples": [
+        "indirizzo di residenza",
+        "indirizzo",
+        "residente in via",
+        "via",
+        "via piazza",
+        { "text": "piazza", "weight": 0.75 },
+        "address",
+        "street",
+        { "text": "domicilio", "weight": 0.6 },
+        { "text": "numero civico", "weight": 0.6 }
+      ]
+    },
+    {
+      "id": "cap",
+      "headings": ["cap", "codice postale", "zip", "zip code", "postal code"],
+      "examples": ["cap", "codice di avviamento postale", "codice postale", "zip", "zip code", "postal code"],
+      "minLength": 5
+    },
+    {
+      "id": "comune_residenza",
+      "headings": ["comune di residenza", "comune", "citta", "city", "citta di residenza"],
+      "examples": [
+        "comune di residenza",
+        "residente a",
+        "residente in",
+        "residente nel comune di",
+        "comune",
+        "citta",
+        "city",
+        { "text": "town", "weight": 0.75 },
+        { "text": "localita", "weight": 0.7 },
+        { "text": "residenza", "weight": 0.65 },
+        { "text": "luogo", "weight": 0.6 }
+      ]
+    },
+    {
+      "id": "provincia",
+      "headings": ["provincia di residenza", "provincia", "province"],
+      "examples": ["provincia", "province", { "text": "pr", "weight": 0.65 }],
+      "minLength": 2
+    },
+    {
+      "id": "telefono",
+      "headings": ["telefono", "cellulare", "phone", "mobile", "numero di telefono", "recapito telefonico"],
+      "examples": [
+        "telefono",
+        "cellulare",
+        "recapito telefonico",
+        "numero di telefono",
+        "phone",
+        "telephone",
+        { "text": "mobile", "weight": 0.8 },
+        { "text": "recapito", "weight": 0.55 }
+      ]
+    },
+    {
+      "id": "email",
+      "headings": ["email", "mail", "posta elettronica", "indirizzo email"],
+      "examples": ["email", "indirizzo email", "posta elettronica", { "text": "mail", "weight": 0.8 }]
+    },
+    {
+      "id": "data_oggi",
+      "headings": ["data di oggi", "data odierna", "data", "oggi", "today", "date"],
+      "examples": [
+        { "text": "data", "weight": 0.75 },
+        "data odierna",
+        { "text": "date", "weight": 0.7 },
+        { "text": "addi", "weight": 0.7 },
+        { "text": "li", "weight": 0.6 }
+      ],
+      "minLength": 6
+    },
+    {
+      "id": "firma",
+      "special": "signature",
+      "examples": ["firma", "firma leggibile", "firma del dichiarante", "signature", "sign here", { "text": "il dichiarante", "weight": 0.75 }]
+    },
+    {
+      "id": "nessuna",
+      "special": "none",
+      "examples": [
+        "pec",
+        "posta elettronica certificata",
+        "protocollo",
+        "protocollo numero",
+        "spazio riservato all ufficio",
+        "riservato all ufficio",
+        "timbro",
+        "numero pratica",
+        "partita iva",
+        "p iva",
+        "note",
+        "importo",
+        "rilasciato il",
+        "cognome del minore",
+        "nome del minore",
+        "codice fiscale del minore",
+        "data di nascita del minore",
+        "cognome del figlio",
+        "nome del figlio",
+        "ragione sociale",
+        "denominazione della ditta"
+      ]
+    }
+  ],
+  "combined": [
+    { "parts": ["nome", "cognome"], "examples": ["il sottoscritto", "io sottoscritto", "nome e cognome", { "text": "nominativo", "weight": 0.8 }, "full name", "name and surname"] },
+    { "parts": ["cognome", "nome"], "examples": ["cognome e nome"] },
+    { "parts": ["comune_residenza", "data_oggi"], "examples": ["luogo e data", "luogo data", "place and date"] },
+    { "parts": ["data_oggi", "comune_residenza"], "examples": ["data e luogo", "date and place"] },
+    { "parts": ["luogo_nascita", "data_nascita"], "examples": ["luogo e data di nascita", "nato a il"] },
+    { "parts": ["data_nascita", "luogo_nascita"], "examples": ["data e luogo di nascita"] }
+  ]
+}

@@ -31,10 +31,10 @@
       <div class="group">
         <select id="profile-select" title="Profilo attivo"></select>
         <button id="btn-profiles" title="Gestisci profili e campi">Profili</button>
-        <button id="btn-autofill" class="primary" title="Riconosci i campi con Jev e compila dal profilo" disabled>Compila</button>
+        <button id="btn-autofill" class="primary" title="Riconosci i campi e compila dal profilo" disabled>Compila</button>
       </div>
       <div class="group">
-        <button id="btn-settings" title="Impostazioni: chiave e server di Jev">Impostazioni</button>
+        <button id="btn-settings" title="Impostazioni: riconoscimento dei campi e Jev">Impostazioni</button>
       </div>
       <div id="hint" class="hint"></div>
     </header>
@@ -137,8 +137,8 @@
 
       <section data-ppanel="headings" hidden>
         <p class="muted">
-          I campi sono comuni a tutti i profili. Per riconoscere i campi del modulo, a Jev vengono inviate solo le
-          intestazioni e le descrizioni: i valori restano su questo computer.
+          I campi sono comuni a tutti i profili. I valori restano su questo computer; se nelle Impostazioni scegli
+          il riconoscimento con Jev, a Jev vengono inviate solo le intestazioni e le descrizioni.
         </p>
         <div id="heading-list"></div>
         <button type="button" id="heading-add">Aggiungi campo</button>
@@ -160,7 +160,7 @@
         <span id="autofill-meta" class="muted"></span>
       </div>
       <div class="autofill-head">
-        <span></span><span>Campo del modulo</span><span>Informazione</span><span>Valore</span><span>Jev</span>
+        <span></span><span>Campo del modulo</span><span>Informazione</span><span>Valore</span><span>Prob.</span>
       </div>
       <div id="autofill-rows"></div>
       <details id="autofill-unmatched">
@@ -176,10 +176,26 @@
 
     <dialog id="settings-dialog">
       <form id="settings-form">
-        <h2>Impostazioni di Jev</h2>
+        <h2>Impostazioni</h2>
+
+        <div class="settings-grid">
+          <label for="settings-engine">Riconoscimento</label>
+          <div class="settings-value">
+            <select id="settings-engine">
+              <option value="local">Sul computer</option>
+              <option value="jev">Jev (servizio esterno)</option>
+            </select>
+            <span class="note">
+              Sul computer nessun testo del modulo esce dal computer. Jev riceve solo le descrizioni dei campi e le
+              intestazioni dei profili, mai i valori.
+            </span>
+          </div>
+        </div>
+
+        <h3>Jev</h3>
         <p class="note">
-          Jev riconosce quali informazioni chiede ogni campo; riceve solo le descrizioni dei campi e le intestazioni dei
-          profili, mai i valori. La chiave viene cifrata col portachiavi di sistema e non viene più mostrata.
+          La chiave viene cifrata col portachiavi di sistema e non viene più mostrata. Serve solo con il riconoscimento
+          Jev.
         </p>
 
         <div class="settings-grid">

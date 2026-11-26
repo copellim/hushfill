@@ -15,6 +15,8 @@ import {
   type FormFieldInfo,
   type Heading,
 } from "./jev";
+import { recognizeFieldsLocally } from "./local-recognizer";
+import { getRecognitionEngine } from "./recognition-engine";
 import { addPlacement, clearPlacements, deleteSelected, getPlacements, initPlacements, renderPlacements, TEXT_BASELINE_RATIO, TEXT_FONT_FAMILY } from "./placements";
 import { initProfileDialog, openProfileDialog } from "./profile-dialog";
 import {
@@ -380,9 +382,9 @@ async function placeTextOnBlank(field: FormFieldInfo, value: string): Promise<vo
   });
 }
 
-// --- Compilazione con Jev --------------------------------------------------------
+// --- Compilazione: riconoscimento in locale o con Jev ---------------------------
 
-async function recognizeFields(fields: FormFieldInfo[]): Promise<FieldDecision[]> {
+async function recognizeFieldsWithJev(fields: FormFieldInfo[]): Promise<FieldDecision[]> {
   const { headings } = getStore();
   const decisions: FieldDecision[] = [];
   for (const prepared of buildJevRequests(fields, headings)) {
@@ -449,15 +451,25 @@ function countText(count: number, singular: string, plural: string): string {
   return `${count} ${count === 1 ? singular : plural}`;
 }
 
+// Motore scelto nelle Impostazioni, con il nome da mostrare nella revisione;
+// null se è Jev ma manca la chiave.
+async function describeEngine(): Promise<{ local: boolean; name: string } | null> {
+  if (getRecognitionEngine() === "local") {
+    return { local: true, name: "riconoscimento sul computer" };
+  }
+  const status = await window.api.jevStatus();
+  return status.configured ? { local: false, name: status.model } : null;
+}
+
 async function autofill(): Promise<void> {
   const pdfDocument = viewer.getDocument();
   if (!pdfDocument) {
     return;
   }
   exitModes();
-  const status = await window.api.jevStatus();
-  if (!status.configured) {
-    showToast("Jev non è configurato: inserisci la chiave API nelle Impostazioni.", "error");
+  const engine = await describeEngine();
+  if (!engine) {
+    showToast("Jev non è configurato: inserisci la chiave API nelle Impostazioni o scegli il riconoscimento sul computer.", "error");
     void openSettingsDialog();
     return;
   }
@@ -476,12 +488,12 @@ async function autofill(): Promise<void> {
     for (const field of fields) {
       field.currentValue = viewer.currentFieldValue(field.ids[0], field.currentValue);
     }
-    setBusy(`Jev sta riconoscendo ${fields.length} campi…`);
+    setBusy(`Riconoscimento di ${fields.length} campi…`);
     const started = performance.now();
-    const decisions = await recognizeFields(fields);
+    const decisions = engine.local ? recognizeFieldsLocally(fields, getStore().headings) : await recognizeFieldsWithJev(fields);
     const elapsed = Math.round(performance.now() - started);
     setBusy(null);
-    const result = await reviewDecisions(decisions, getStore(), `${fields.length} campi · ${status.model} · ${elapsed} ms`);
+    const result = await reviewDecisions(decisions, getStore(), `${fields.length} campi · ${engine.name} · ${elapsed} ms`);
     if (result) {
       await applyAutofill(result);
     }

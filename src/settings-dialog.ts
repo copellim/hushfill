@@ -1,11 +1,14 @@
-// Finestra Impostazioni di Jev: chiave API, modello e server. La chiave si
-// scrive qui e va al processo principale, che la cifra col portachiavi; non
-// torna mai indietro, la finestra sa solo se ce n'è una salvata.
+// Finestra Impostazioni: motore di riconoscimento e, per Jev, chiave API,
+// modello e server. La chiave si scrive qui e va al processo principale, che
+// la cifra col portachiavi; non torna mai indietro, la finestra sa solo se ce
+// n'è una salvata.
 import type { JevSettingsForm, JevSettingsView } from "./api";
 import { errorMessage as errorText } from "./errors";
+import { getRecognitionEngine, setRecognitionEngine, type RecognitionEngine } from "./recognition-engine";
 
 const dialog = document.querySelector<HTMLDialogElement>("#settings-dialog")!;
 const form = document.querySelector<HTMLFormElement>("#settings-form")!;
+const engineSelect = document.querySelector<HTMLSelectElement>("#settings-engine")!;
 const keyInput = document.querySelector<HTMLInputElement>("#settings-key")!;
 const keyState = document.querySelector<HTMLSpanElement>("#settings-key-state")!;
 const keyRemove = document.querySelector<HTMLButtonElement>("#settings-key-remove")!;
@@ -36,6 +39,7 @@ function describeKeyState(): string {
 }
 
 function render(): void {
+  engineSelect.value = getRecognitionEngine();
   if (!view) {
     return;
   }
@@ -72,6 +76,7 @@ async function save(event: SubmitEvent): Promise<void> {
   event.preventDefault();
   try {
     await window.api.saveJevSettings(readForm());
+    setRecognitionEngine(engineSelect.value as RecognitionEngine);
     dialog.close();
   } catch (error) {
     showResult(errorText(error), "error");
