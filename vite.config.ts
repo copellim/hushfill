@@ -1,7 +1,7 @@
 import { defineConfig } from "vite";
 
 export default defineConfig({
-  // Percorsi relativi: in produzione la pagina è caricata da file://.
+  // Relative paths: in production the page is loaded from file://.
   base: "./",
   build: {
     target: "esnext",

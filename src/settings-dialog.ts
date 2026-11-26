@@ -1,7 +1,7 @@
-// Finestra Impostazioni: motore di riconoscimento e, per Jev, chiave API,
-// modello e server. La chiave si scrive qui e va al processo principale, che
-// la cifra col portachiavi; non torna mai indietro, la finestra sa solo se ce
-// n'è una salvata.
+// Settings window: recognition engine and, for Jev, API key, model and
+// server. The key is typed here and goes to the main process, which encrypts
+// it with the keyring; it never comes back, the window only knows whether one
+// is saved.
 import type { JevSettingsForm, JevSettingsView } from "./api";
 import { errorMessage as errorText } from "./errors";
 import { getRecognitionEngine, setRecognitionEngine, type RecognitionEngine } from "./recognition-engine";
@@ -20,7 +20,7 @@ const result = document.querySelector<HTMLParagraphElement>("#settings-result")!
 const testButton = document.querySelector<HTMLButtonElement>("#settings-test")!;
 
 let view: JevSettingsView | null = null;
-// "Rimuovi chiave" premuto: la rimozione avviene solo con Salva.
+// "Rimuovi chiave" (remove key) pressed: removal happens only on Salva (Save).
 let removeKey = false;
 
 function showResult(text: string, tone: "ok" | "error" | "" = ""): void {
@@ -97,7 +97,7 @@ export function initSettingsDialog(): void {
     }
   });
   document.querySelector<HTMLButtonElement>("#settings-cancel")!.addEventListener("click", () => dialog.close());
-  // Alla chiusura la chiave digitata non resta nel campo.
+  // On close the typed key does not stay in the field.
   dialog.addEventListener("close", () => {
     keyInput.value = "";
   });

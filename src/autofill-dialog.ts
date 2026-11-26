@@ -1,8 +1,8 @@
-// Revisione delle proposte di Jev. Qui, in locale, ogni intestazione scelta
-// da Jev viene associata al valore del profilo; l'utente può correggere
-// l'abbinamento, il valore o escludere il campo prima che venga scritto.
-// Quando l'utente scrive un valore che il profilo non ha, la revisione
-// propone di salvarlo: come campo nuovo o come valore mancante.
+// Review of Jev's proposals. Here, locally, every heading chosen by Jev
+// is matched to the profile's value; the user can correct the match,
+// the value, or exclude the field before it is written.
+// When the user types a value the profile does not have, the review
+// offers to save it: as a new field or as a missing value.
 import { COMBINED_CHOICE, SIGNATURE_CHOICE, type FieldDecision, type Heading } from "./jev";
 import { combinedValue, headingValue, suggestHeadingLabel, type Profile, type ProfileStore, type ProfileUpdates } from "./profiles";
 
@@ -18,9 +18,9 @@ export interface AutofillResult {
   profileUpdates: ProfileUpdates;
 }
 
-// Sotto questa probabilità la proposta resta visibile ma non spuntata.
+// Below this probability the proposal stays visible but unticked.
 const AUTO_CHECK_PROBABILITY = 0.5;
-// Valori speciali del menu "Informazione", accanto agli id delle intestazioni.
+// Special values of the "Informazione" (information) menu, next to the heading ids.
 const NOT_FILLED = "";
 const NEW_HEADING = "__nuovo";
 const MANUAL_VALUE = "__a-mano";
@@ -39,9 +39,9 @@ interface Row {
   checkbox: HTMLInputElement;
   target: HTMLSelectElement;
   value: HTMLInputElement;
-  // Nome del campo da creare, visibile con "+ nuovo campo del profilo".
+  // Name of the field to create, visible with "+ nuovo campo del profilo" (new profile field).
   newLabel: HTMLInputElement;
-  // "Salva nel profilo", visibile quando il profilo non ha il valore scritto.
+  // "Salva nel profilo" (save to profile), visible when the profile lacks the typed value.
   saveValue: HTMLInputElement;
   saveValueLabel: HTMLLabelElement;
 }
@@ -64,7 +64,7 @@ function headingOf(target: string) {
   return currentStore?.headings.find((h) => h.id === target);
 }
 
-// Il valore viene dal profilo solo se l'informazione è un'intestazione o la firma.
+// The value comes from the profile only if the information is a heading or the signature.
 function isWrittenByHand(target: string): boolean {
   return target === NEW_HEADING || target === MANUAL_VALUE;
 }
@@ -120,7 +120,7 @@ function buildTargetSelect(store: ProfileStore, decision: FieldDecision): HTMLSe
   return select;
 }
 
-// Il valore scritto manca nel profilo per un'intestazione (non automatica).
+// The typed value is missing from the profile for a (non-automatic) heading.
 function isMissingFromProfile(row: Row, profile: Profile | null): boolean {
   const heading = headingOf(row.target.value);
   return Boolean(heading && !heading.automatic && profile && !profile.values[heading.id] && row.value.value.trim());
@@ -142,7 +142,7 @@ function refreshExtras(row: Row, profile: Profile | null): void {
 function refreshRow(row: Row, profile: Profile | null, resetCheck: boolean): void {
   const target = row.target.value;
   const isSignature = target === SIGNATURE_CHOICE;
-  // Per i valori scritti a mano si tiene ciò che l'utente ha digitato.
+  // For values typed by hand, what the user typed is kept.
   const value = isWrittenByHand(target) ? row.value.value : resolveValue(row, profile);
   row.value.value = value;
   row.value.readOnly = isSignature;
@@ -158,8 +158,8 @@ function refreshRow(row: Row, profile: Profile | null, resetCheck: boolean): voi
   refreshExtras(row, profile);
 }
 
-// Scrivere in un campo non riconosciuto è la proposta: diventa un campo
-// nuovo del profilo, con un nome ricavato dal modulo e modificabile.
+// Typing into an unrecognised field is the proposal: it becomes a new
+// profile field, with a name derived from the form and editable.
 function onValueTyped(row: Row): void {
   if (row.target.value === NOT_FILLED && row.value.value.trim()) {
     row.target.value = NEW_HEADING;
@@ -260,7 +260,7 @@ function collectResult(profile: Profile): AutofillResult {
   };
 }
 
-// Un campo nuovo senza nome non si può salvare: si segnala invece di perderlo.
+// A new field without a name cannot be saved: it is flagged instead of being lost.
 function firstUnnamedNewHeading(): Row | undefined {
   return rows.find((row) => row.checkbox.checked && row.target.value === NEW_HEADING && row.value.value.trim() && !row.newLabel.value.trim());
 }

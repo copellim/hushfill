@@ -1,5 +1,5 @@
-// Sviluppo: server Vite con hot reload + Electron puntato al server.
-// Argomenti extra vengono passati a Electron (es. npm run dev -- ~/doc.pdf).
+// Development: Vite server with hot reload + Electron pointed at the server.
+// Extra arguments are passed to Electron (e.g. npm run dev -- ~/doc.pdf).
 import { spawn } from "node:child_process";
 import { createRequire } from "node:module";
 import { createServer } from "vite";

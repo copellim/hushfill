@@ -1,13 +1,13 @@
-// Riconoscimento dei campi con Jev (TypeSafe, modello decisionale).
-// Jev riceve SOLO la descrizione dei campi del modulo e le intestazioni dei
-// campi del profilo; risponde quale intestazione serve a ciascun campo. I
-// valori del profilo non entrano mai in questo modulo: l'associazione
-// intestazione -> valore avviene in locale, dopo.
+// Field recognition with Jev (TypeSafe, decision model).
+// Jev receives ONLY the description of the form's fields and the headings of
+// the profile fields; it answers which heading each field needs. Profile
+// values never enter this module: the heading -> value matching happens
+// locally, afterwards.
 // Formato: https://docs.typesafe.ai/introduction/quickstart
 
 export interface FormFieldInfo {
-  // acroform: campo compilabile del PDF; blank: riga vuota stampata sul
-  // foglio, come caratteri ("____", "....") o come linea disegnata.
+  // acroform: fillable field of the PDF; blank: blank line printed on the
+  // sheet, as characters ("____", "....") or as a drawn line.
   source: "acroform" | "blank";
   fieldName: string;
   ids: string[];
@@ -16,9 +16,9 @@ export interface FormFieldInfo {
   label: string;
   maxLen: number | null;
   pageIndex: number;
-  // Rettangolo in coordinate PDF della pagina [x1, y1, x2, y2].
+  // Rectangle in the page's PDF coordinates [x1, y1, x2, y2].
   rect: [number, number, number, number];
-  // Corpo del testo attorno a una riga vuota, per scriverci sopra in proporzione.
+  // Text size around a blank line, to write over it in proportion.
   fontSize: number | null;
   currentValue: string;
 }
@@ -27,8 +27,8 @@ export interface Heading {
   id: string;
   label: string;
   description: string;
-  // Valore calcolato al momento della compilazione invece che salvato nel
-  // profilo. A Jev arrivano comunque solo etichetta e descrizione.
+  // Value computed at fill time instead of saved in the profile.
+  // Jev still receives only the label and the description.
   automatic?: "today";
 }
 
@@ -38,7 +38,7 @@ export interface JevChoiceQuestion {
   criteria: Record<string, string>;
 }
 
-// Domanda sì/no: Jev risponde con la probabilità del sì.
+// Yes/no question: Jev answers with the probability of yes.
 export interface JevYesNoQuestion {
   type: "noul";
   instructions: string;
@@ -69,28 +69,28 @@ export interface JevResponse {
 
 export const SIGNATURE_CHOICE = "firma";
 export const NONE_CHOICE = "nessuna";
-// Il campo vuole più informazioni del profilo scritte una dopo l'altra
-// ("Il sottoscritto" = nome e cognome, "Luogo e data"): quali, lo dice una
-// seconda richiesta con una domanda sì/no per intestazione.
+// The field wants several pieces of profile information written one after
+// the other ("Il sottoscritto" = first name and surname, "Luogo e data"):
+// which ones is said by a second request with one yes/no question per heading.
 export const COMBINED_CHOICE = "insieme";
 
 export interface FieldDecision {
   field: FormFieldInfo;
-  // Id dell'intestazione del profilo, SIGNATURE_CHOICE, COMBINED_CHOICE o
-  // null se nessuna.
+  // Id of the profile heading, SIGNATURE_CHOICE, COMBINED_CHOICE or
+  // null if none.
   target: string | null;
-  // Con COMBINED_CHOICE: id delle intestazioni, nell'ordine di scrittura.
+  // With COMBINED_CHOICE: ids of the headings, in writing order.
   parts: string[];
   probability: number;
   confidence: number;
 }
 
-// Oltre questa soglia di domande per richiesta si spezza: ogni domanda
-// ripete l'elenco delle intestazioni e il limite è 64k token per richiesta.
+// Beyond this number of questions per request it is split: every question
+// repeats the list of headings and the limit is 64k tokens per request.
 const QUESTIONS_PER_REQUEST = 40;
-// Le domande sì/no non ripetono l'elenco: ne stanno molte di più.
+// Yes/no questions do not repeat the list: many more of them fit.
 const PART_QUESTIONS_PER_REQUEST = 150;
-// Un'intestazione fa parte del campo combinato da questa probabilità in su.
+// A heading belongs to the combined field from this probability up.
 const PART_MIN_PROBABILITY = 0.5;
 const MAX_TEXT_LENGTH = 160;
 
@@ -116,8 +116,8 @@ function describeField(field: FormFieldInfo): string {
   return parts.join("; ");
 }
 
-// Le chiavi delle risposte sono neutre (info_1, info_2…) e tradotte in id
-// delle intestazioni in locale: Jev vede l'etichetta, non i nostri id interni.
+// The answer keys are neutral (info_1, info_2…) and translated into heading
+// ids locally: Jev sees the label, not our internal ids.
 export function buildCriteria(headings: Heading[]): { criteria: Record<string, string>; keyToHeading: Map<string, string> } {
   const criteria: Record<string, string> = {};
   const keyToHeading = new Map<string, string>();
@@ -176,8 +176,8 @@ function choiceTarget(choice: string, keyToHeading: Map<string, string>): string
   return keyToHeading.get(choice) ?? null;
 }
 
-// Le decisioni COMBINED_CHOICE escono senza parti: le riempie la seconda
-// richiesta (buildPartRequests / applyPartAnswers).
+// COMBINED_CHOICE decisions come out without parts: the second request
+// fills them in (buildPartRequests / applyPartAnswers).
 export function parseJevResponse(prepared: PreparedRequest, response: JevResponse): FieldDecision[] {
   const decisions: FieldDecision[] = [];
   for (const [questionId, field] of prepared.questionToField) {
@@ -197,7 +197,7 @@ export function parseJevResponse(prepared: PreparedRequest, response: JevRespons
   return decisions;
 }
 
-// --- Campi combinati: quali intestazioni, in che ordine ----------------------
+// --- Combined fields: which headings, in what order --------------------------
 
 export interface PreparedPartRequest {
   request: JevRequest<JevYesNoQuestion>;
@@ -208,8 +208,8 @@ function headingText(heading: Heading): string {
   return heading.description.trim() ? `${heading.label} (${heading.description})` : heading.label;
 }
 
-// Una domanda sì/no per ogni coppia campo combinato × intestazione. Anche qui
-// a Jev vanno solo descrizioni del campo ed etichette, mai valori.
+// One yes/no question for every combined field × heading pair. Here too
+// only field descriptions and labels go to Jev, never values.
 export function buildPartRequests(decisions: FieldDecision[], headings: Heading[]): PreparedPartRequest[] {
   const pairs = decisions
     .filter((decision) => decision.target === COMBINED_CHOICE)
@@ -238,7 +238,7 @@ export function buildPartRequests(decisions: FieldDecision[], headings: Heading[
   return prepared;
 }
 
-// Raccoglie le intestazioni con probabilità sufficiente, per decisione.
+// Collects the headings with sufficient probability, per decision.
 export function collectPartAnswers(prepared: PreparedPartRequest, response: JevResponse, into: Map<FieldDecision, string[]>): void {
   for (const [questionId, { decision, headingId }] of prepared.questionToPart) {
     const answer = response.answers[questionId];
@@ -248,19 +248,19 @@ export function collectPartAnswers(prepared: PreparedPartRequest, response: JevR
   }
 }
 
-// Posizione di una parola intera nel testo, senza distinzione di maiuscole:
-// "nome" non deve trovarsi dentro "cognome".
+// Position of a whole word in the text, case-insensitive:
+// "nome" must not be found inside "cognome".
 function wordPosition(text: string, word: string): number {
   const escaped = word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   const match = new RegExp(`(^|[^\\p{L}])${escaped}(?=$|[^\\p{L}])`, "iu").exec(text);
   return match ? match.index + match[1].length : Number.POSITIVE_INFINITY;
 }
 
-// Ordine di scrittura: quello in cui il modulo nomina le informazioni
-// ("Cognome e nome"), cercando la prima parola dell'etichetta ("Data di oggi"
-// → data). Vale solo se le nomina tutte: in "Luogo e data" con "Comune di
-// residenza" il comune non compare, e mescolare i due ordini metterebbe la
-// data davanti. Altrimenti si segue l'ordine del profilo.
+// Writing order: the one in which the form names the pieces of information
+// ("Cognome e nome"), looking for the first word of the label ("Data di oggi"
+// → data). It applies only if it names all of them: in "Luogo e data" with
+// "Comune di residenza" the town does not appear, and mixing the two orders
+// would put the date first. Otherwise the profile's order is followed.
 export function orderParts(field: FormFieldInfo, headingIds: string[], headings: Heading[]): string[] {
   const text = `${field.label} ${field.tooltip}`;
   const parts = headings
@@ -272,8 +272,8 @@ export function orderParts(field: FormFieldInfo, headingIds: string[], headings:
   return parts.map(({ id }) => id);
 }
 
-// Decisione finale di un campo combinato: nessuna parte → nessuna
-// informazione, una sola → quella intestazione, due o più → combinato.
+// Final decision for a combined field: no part → no information,
+// only one → that heading, two or more → combined.
 export function resolveCombined(decision: FieldDecision, headingIds: string[], headings: Heading[]): FieldDecision {
   if (headingIds.length === 0) {
     return { ...decision, target: null, parts: [] };

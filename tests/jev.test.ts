@@ -25,7 +25,7 @@ function field(fieldName: string, label = ""): FormFieldInfo {
   return { source: "acroform", fieldName, ids: ["1R"], kind: "text", tooltip: "", label, maxLen: null, pageIndex: 0, rect: [0, 0, 10, 10], fontSize: null, currentValue: "" };
 }
 
-test("la richiesta contiene solo intestazioni e descrizioni dei campi, mai valori", () => {
+test("the request contains only headings and field descriptions, never values", () => {
   const [prepared] = buildJevRequests([field("Text1", "Il sottoscritto")], headings);
   const serialized = JSON.stringify(prepared.request);
   assert.match(serialized, /Codice fiscale: 16 caratteri/);
@@ -34,14 +34,14 @@ test("la richiesta contiene solo intestazioni e descrizioni dei campi, mai valor
   assert.deepEqual(Object.keys(criteria), ["info_1", "info_2", COMBINED_CHOICE, SIGNATURE_CHOICE, NONE_CHOICE]);
 });
 
-test("oltre 40 campi la richiesta si spezza e la numerazione prosegue", () => {
+test("beyond 40 fields the request is split and the numbering continues", () => {
   const fields = Array.from({ length: 45 }, (_, i) => field(`Text${i}`));
   const prepared = buildJevRequests(fields, headings);
   assert.equal(prepared.length, 2);
   assert.deepEqual(Object.keys(prepared[1].request.questions), ["campo_41", "campo_42", "campo_43", "campo_44", "campo_45"]);
 });
 
-test("la risposta viene tradotta negli id delle intestazioni", () => {
+test("the answer is translated into heading ids", () => {
   const [prepared] = buildJevRequests([field("cf"), field("firma"), field("note")], headings);
   const decisions = parseJevResponse(prepared, {
     model: "jev-1.14.0",
@@ -61,7 +61,7 @@ test("la risposta viene tradotta negli id delle intestazioni", () => {
   );
 });
 
-test("risposta mancante per un campo: nessun abbinamento", () => {
+test("missing answer for a field: no match", () => {
   const [prepared] = buildJevRequests([field("x")], headings);
   const [decision] = parseJevResponse(prepared, { model: "jev-1.14.0", answers: {} });
   assert.equal(decision.target, null);
@@ -78,7 +78,7 @@ function combined(label: string): FieldDecision {
   return { field: field("Text1", label), target: COMBINED_CHOICE, parts: [], probability: 0.9, confidence: 0.9 };
 }
 
-test("campo combinato: una domanda sì/no per intestazione, solo per i campi combinati", () => {
+test("combined field: one yes/no question per heading, only for combined fields", () => {
   const plain: FieldDecision = { ...combined("Telefono"), target: "h-nome" };
   const [prepared] = buildPartRequests([plain, combined("Il sottoscritto")], personHeadings);
   const questions = Object.values(prepared.request.questions);
@@ -88,7 +88,7 @@ test("campo combinato: una domanda sì/no per intestazione, solo per i campi com
   assert.deepEqual(buildPartRequests([plain], personHeadings), []);
 });
 
-test("le risposte sì/no tengono le intestazioni da 0,5 in su", () => {
+test("yes/no answers keep the headings from 0.5 up", () => {
   const decision = combined("Il sottoscritto");
   const [prepared] = buildPartRequests([decision], personHeadings);
   const parts = new Map<FieldDecision, string[]>();
@@ -103,7 +103,7 @@ test("le risposte sì/no tengono le intestazioni da 0,5 in su", () => {
   assert.deepEqual(parts.get(decision), ["h-nome", "h-cognome"]);
 });
 
-test("ordine delle parti: come le nomina il modulo se le nomina tutte, altrimenti quello del profilo", () => {
+test("order of the parts: as the form names them if it names all of them, otherwise the profile's", () => {
   const withCity: Heading[] = [{ id: "h-comune", label: "Comune di residenza", description: "" }, ...personHeadings];
   assert.deepEqual(orderParts(field("x", "a sinistra: Luogo e data"), ["h-oggi", "h-comune"], withCity), ["h-comune", "h-oggi"]);
   assert.deepEqual(orderParts(field("x", "a sinistra: Data e luogo"), ["h-oggi", "h-luogo"], personHeadings), ["h-oggi", "h-luogo"]);
@@ -112,7 +112,7 @@ test("ordine delle parti: come le nomina il modulo se le nomina tutte, altriment
   assert.deepEqual(orderParts(field("x", "a sinistra: Il sottoscritto"), ["h-cognome", "h-nome"], personHeadings), ["h-nome", "h-cognome"]);
 });
 
-test("un campo combinato con una sola parte diventa un campo semplice, senza parti nessuna informazione", () => {
+test("a combined field with a single part becomes a simple field, with no parts no information", () => {
   assert.deepEqual(resolveCombined(combined("x"), ["h-nome"], personHeadings).target, "h-nome");
   assert.equal(resolveCombined(combined("x"), [], personHeadings).target, null);
   const both = resolveCombined(combined("Il sottoscritto"), ["h-cognome", "h-nome"], personHeadings);

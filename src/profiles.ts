@@ -1,27 +1,27 @@
-// Profili: intestazioni dei campi condivise e definite dall'utente, valori
-// e firma per profilo. Tutto cifrato su disco dal processo principale.
+// Profiles: field headings, shared and defined by the user, values and
+// signature per profile. All encrypted on disk by the main process.
 import type { FormFieldInfo, Heading } from "./jev";
 import type { SignatureImage } from "./signature-dialog";
 
 export interface Profile {
   id: string;
   name: string;
-  values: Record<string, string>; // id intestazione -> valore
+  values: Record<string, string>; // heading id -> value
   signature: SignatureImage | null;
 }
 
 export interface ProfileStore {
-  // 2: aggiunta l'intestazione automatica "Data di oggi".
-  // 3: tolta "Nome e cognome", ora composta da Nome e Cognome.
-  // 4: descrizioni predefinite di "Data di oggi" e "Comune di residenza".
+  // 2: added the automatic heading "Data di oggi" (today's date).
+  // 3: removed "Nome e cognome" (full name), now composed from Nome and Cognome.
+  // 4: default descriptions of "Data di oggi" and "Comune di residenza".
   version: 4;
   headings: Heading[];
   profiles: Profile[];
   activeProfileId: string | null;
 }
 
-// Le descrizioni finiscono nelle opzioni mandate a Jev: non devono legare la
-// data da sola a «Luogo e data», che è un campo combinato.
+// The descriptions end up in the options sent to Jev: they must not tie the
+// date alone to «Luogo e data» (place and date), which is a combined field.
 const TODAY_HEADING: Omit<Heading, "id"> = {
   label: "Data di oggi",
   description: "Data del giorno in cui si compila il modulo",
@@ -59,17 +59,17 @@ function emptyStore(): ProfileStore {
   };
 }
 
-// Etichetta del vecchio campo predefinito, tolto nella versione 3.
+// Label of the old default field, removed in version 3.
 const LEGACY_FULL_NAME_LABEL = "Nome e cognome";
 
 type SavedStore = { version: number } & Omit<ProfileStore, "version">;
 
-// Ogni passo gira una volta sola: se poi l'utente riaggiunge o elimina un
-// campo, il numero di versione impedisce di rifarlo.
+// Each step runs only once: if the user later adds back or deletes a
+// field, the version number prevents redoing it.
 export function migrateStore(saved: SavedStore): ProfileStore {
   let store = saved;
   if (store.version < 2) {
-    // I profili salvati prima della data automatica la ricevono.
+    // Profiles saved before the automatic date receive it.
     store = { ...store, version: 2, headings: [...store.headings, { id: crypto.randomUUID(), ...TODAY_HEADING }] };
   }
   if (store.version < 3) {
@@ -81,8 +81,8 @@ export function migrateStore(saved: SavedStore): ProfileStore {
   return store as ProfileStore;
 }
 
-// Descrizioni predefinite cambiate nella versione 4: si aggiornano solo se
-// l'utente non le ha toccate.
+// Default descriptions changed in version 4: they are updated only if
+// the user has not touched them.
 const UPDATED_DESCRIPTIONS: { label: string; previous: string; current: string }[] = [
   { label: TODAY_HEADING.label, previous: "Data della compilazione, ad esempio in «Luogo e data» o accanto alla firma", current: TODAY_HEADING.description },
   { label: "Comune di residenza", previous: "", current: CITY_DESCRIPTION },
@@ -93,8 +93,8 @@ function withCurrentDefaultDescription(heading: Heading): Heading {
   return update ? { ...heading, description: update.current } : heading;
 }
 
-// Il nome completo ora si compone da Nome e Cognome (campo combinato): il
-// vecchio campo si toglie, con i suoi valori, dalle intestazioni e dai profili.
+// The full name is now composed from Nome and Cognome (combined field): the
+// old field is removed, with its values, from the headings and the profiles.
 function withoutLegacyFullName(store: SavedStore): SavedStore {
   const legacy = findHeadingByLabel(store.headings, LEGACY_FULL_NAME_LABEL);
   if (!legacy) {
@@ -107,13 +107,13 @@ function withoutLegacyFullName(store: SavedStore): SavedStore {
   return { ...store, version: 3, headings: store.headings.filter((h) => h.id !== legacy.id), profiles };
 }
 
-// gg/mm/aaaa, il formato dei moduli italiani.
+// dd/mm/yyyy, the format of Italian forms.
 export function todayText(now = new Date()): string {
   return new Intl.DateTimeFormat("it-IT", { day: "2-digit", month: "2-digit", year: "numeric" }).format(now);
 }
 
-// Cosa la revisione della compilazione propone di aggiungere al profilo:
-// campi nuovi (con il valore scritto dall'utente) e valori mancanti.
+// What the fill review proposes to add to the profile:
+// new fields (with the value typed by the user) and missing values.
 export interface ProfileUpdates {
   newHeadings: { label: string; description: string; value: string }[];
   values: { headingId: string; value: string }[];
@@ -128,9 +128,9 @@ function findHeadingByLabel(headings: Heading[], label: string): Heading | undef
   return headings.find((h) => h.label.trim().toLocaleLowerCase("it") === wanted);
 }
 
-// Nuovo store con gli aggiornamenti applicati al profilo indicato. Un campo
-// "nuovo" che esiste già con lo stesso nome non si duplica: ne riceve solo il
-// valore, e solo se nel profilo manca (non si sovrascrive senza chiedere).
+// New store with the updates applied to the given profile. A "new" field
+// that already exists with the same name is not duplicated: only its value
+// is received, and only if the profile lacks it (no overwriting without asking).
 export function withProfileUpdates(current: ProfileStore, profileId: string, updates: ProfileUpdates): ProfileStore {
   const next = structuredClone(current);
   const profile = next.profiles.find((p) => p.id === profileId);
@@ -161,15 +161,15 @@ export function withProfileUpdates(current: ProfileStore, profileId: string, upd
 
 const MAX_SUGGESTED_LABEL = 40;
 const CONTEXT_PREFIX = /^(a sinistra|sopra|sotto):\s*/i;
-// "iscritto all'albo n.", "tessera nr.": l'abbreviazione di "numero" in coda
-// è il segnaposto del valore, non parte del nome.
+// "iscritto all'albo n.", "tessera nr.": the trailing abbreviation of "numero"
+// (number) is the value's placeholder, not part of the name.
 const TRAILING_NUMBER_ABBREVIATION = /\s+(n|nr|num|n°)\.?$/i;
-// Nomi tecnici senza significato generati dagli editor di moduli.
+// Meaningless technical names generated by form editors.
 const GENERIC_FIELD_NAME = /^(text|testo|campo|field|untitled)[\s_.-]*\d*$/i;
 
-// Nome proposto per un nuovo campo del profilo, dal testo che il modulo
-// stampa accanto al campo: "a sinistra: Numero di tessera:" → "Numero di
-// tessera". Se è lungo si tengono le ultime parole, le più vicine al campo.
+// Name proposed for a new profile field, from the text the form prints
+// next to the field: "a sinistra: Numero di tessera:" → "Numero di
+// tessera". If it is long the last words, closest to the field, are kept.
 export function suggestHeadingLabel(field: Pick<FormFieldInfo, "tooltip" | "label" | "fieldName">): string {
   const fieldName = GENERIC_FIELD_NAME.test(field.fieldName) ? "" : field.fieldName;
   const source = (field.tooltip || field.label.replace(CONTEXT_PREFIX, "") || fieldName)
@@ -184,7 +184,7 @@ export function suggestHeadingLabel(field: Pick<FormFieldInfo, "tooltip" | "labe
   return label.charAt(0).toLocaleUpperCase("it") + label.slice(1);
 }
 
-// Valore di un'intestazione per un profilo: calcolato se automatica.
+// Value of a heading for a profile: computed if automatic.
 export function headingValue(heading: Heading, profile: Profile): string {
   return heading.automatic === "today" ? todayText() : (profile.values[heading.id] ?? "");
 }
@@ -193,9 +193,9 @@ function isDateHeading(heading: Heading): boolean {
   return heading.automatic === "today" || /^data\b/i.test(heading.label.trim());
 }
 
-// Valore di un campo combinato, composto in locale nell'ordine dato: spazio
-// tra le parti, virgola prima di una data ("Parma, 03/11/2026"). Se manca
-// una parte il valore resta vuoto: meglio chiederla che scrivere metà.
+// Value of a combined field, composed locally in the given order: space
+// between the parts, comma before a date ("Parma, 03/11/2026"). If a part is
+// missing the value stays empty: better to ask for it than to write half.
 export function combinedValue(parts: Heading[], profile: Profile): { value: string; missing: string[] } {
   const missing = parts.filter((heading) => !headingValue(heading, profile)).map((heading) => heading.label);
   if (missing.length > 0) {
@@ -230,8 +230,8 @@ export async function loadProfiles(): Promise<void> {
   listeners.forEach((listener) => listener());
 }
 
-// Sostituisce lo store intero e lo salva: chi modifica lavora su una copia
-// e conferma alla fine, così un "Annulla" non lascia mezze modifiche.
+// Replaces the whole store and saves it: whoever edits works on a copy
+// and confirms at the end, so an "Annulla" (cancel) leaves no half-made changes.
 export async function replaceStore(next: ProfileStore): Promise<void> {
   await window.api.saveProfiles(JSON.stringify(next));
   store = next;

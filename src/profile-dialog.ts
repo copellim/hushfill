@@ -1,6 +1,6 @@
-// Gestione profili: elenco, valori per intestazione, firma del profilo e
-// intestazioni dei campi (comuni a tutti i profili). Si lavora su una copia
-// e si salva tutto insieme con "Salva".
+// Profile management: list, values per heading, the profile's signature and
+// the field headings (shared by all profiles). It works on a copy and saves
+// everything together with "Salva" (Save).
 import { askForSignature } from "./signature-dialog";
 import { cloneStore, headingValue, replaceStore, type Profile, type ProfileStore } from "./profiles";
 
@@ -71,7 +71,7 @@ function renderProfiles(): void {
       input.value = headingValue(heading, profile);
       input.placeholder = heading.description;
       if (heading.automatic) {
-        // Calcolata a ogni compilazione: qui si mostra, non si salva.
+        // Computed at every fill: shown here, not saved.
         input.readOnly = true;
         input.title = "Automatica: la data del giorno in cui compili";
       } else {

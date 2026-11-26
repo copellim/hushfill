@@ -33,28 +33,28 @@ import { initSettingsDialog, openSettingsDialog } from "./settings-dialog";
 import { askForSignature, initSignatureDialog, type SignatureImage } from "./signature-dialog";
 import * as viewer from "./viewer";
 
-// Larghezza iniziale di una firma posizionata a mano, in frazione di pagina.
+// Initial width of a signature placed by hand, as a fraction of the page.
 const DEFAULT_SIGNATURE_WIDTH = 0.28;
-// Altezza minima, in punti, di una firma messa in un campo firma basso
-// (spesso è solo una riga): sotto questa misura sarebbe illeggibile.
+// Minimum height, in points, of a signature placed in a short signature field
+// (often just one line): below this size it would be unreadable.
 const MIN_FIELD_SIGNATURE_HEIGHT = 36;
-// Su una riga vuota la firma è alta 2,4 volte il corpo del testo e scende
-// sotto la riga di un quarto del corpo.
+// On a blank line the signature is 2.4 times the text size tall and drops
+// below the line by a quarter of the text size.
 const BLANK_SIGNATURE_HEIGHT_RATIO = 2.4;
 const BLANK_SIGNATURE_SINK_RATIO = 0.25;
 const TOAST_MS = 4500;
-// Testo libero e testo scritto sulle righe vuote, in punti PDF.
+// Free text and text written on blank lines, in PDF points.
 const DEFAULT_TEXT_SIZE = 11;
 const MIN_FILL_TEXT_SIZE = 6;
 const MAX_FILL_TEXT_SIZE = 12;
-// Margine tra l'inizio della riga e il valore, in frazione del corpo: molte
-// righe cominciano subito dopo l'etichetta ("sottoscritto/a____"), e con
-// pochi punti fissi il valore sembrava attaccato al testo stampato.
+// Margin between the start of the line and the value, as a fraction of the
+// text size: many lines start right after the label ("sottoscritto/a____"),
+// and with a few fixed points the value looked stuck to the printed text.
 const BLANK_TEXT_PADDING_RATIO = 0.6;
 const BLANK_TEXT_RIGHT_PADDING = 2;
-// form-fields.ts mette il bordo inferiore del rettangolo 2 pt sotto la linea
-// di base della riga; il testo si appoggia 1 pt sopra quella linea di base,
-// così non tocca i trattini bassi.
+// form-fields.ts puts the rectangle's bottom edge 2 pt below the line's
+// baseline; the text rests 1 pt above that baseline, so it does not touch
+// the underscores.
 const BLANK_RECT_BASELINE_OFFSET = 2;
 const TEXT_ABOVE_LINE = 1;
 const APP_NAME = "Hushfill";
@@ -96,7 +96,7 @@ let textMode = false;
 const measureContext = new OffscreenCanvas(1, 1).getContext("2d")!;
 let toastTimer = 0;
 
-// --- Stato e messaggi -----------------------------------------------------------
+// --- State and messages ---------------------------------------------------------
 
 function showToast(message: string, kind: "info" | "error" = "info"): void {
   ui.toast.textContent = message;
@@ -136,7 +136,7 @@ function setHint(text: string): void {
   ui.hint.textContent = text;
 }
 
-// --- Apertura e salvataggio ----------------------------------------------------
+// --- Opening and saving --------------------------------------------------------
 
 function askPassword(wrong: boolean): Promise<string | null> {
   ui.passwordMessage.textContent = wrong ? "Password errata, riprova." : "Inserisci la password per aprire il documento.";
@@ -171,7 +171,7 @@ async function showFile(file: PdfFile): Promise<void> {
     if (!pdfDocument) {
       return;
     }
-    // I tipi di pdf.js dichiarano il gancio come null, ma è una callback.
+    // pdf.js's types declare the hook as null, but it is a callback.
     (pdfDocument.annotationStorage as unknown as { onSetModified: () => void }).onSetModified = () => setDirty(true);
     currentFile = { path: file.path, name: file.name };
     ui.pageCount.textContent = `/ ${pdfDocument.numPages}`;
@@ -220,7 +220,7 @@ async function save(): Promise<void> {
   }
 }
 
-// --- Firma ------------------------------------------------------------------------
+// --- Signature --------------------------------------------------------------------
 
 function exitModes(): void {
   pendingSignature = null;
@@ -314,9 +314,9 @@ function placePendingSignature(event: MouseEvent, page: HTMLElement, signature: 
   exitModes();
 }
 
-// Altezza massima della firma: in un campo firma vero almeno quella del
-// campo; su una riga vuota stampata un multiplo del corpo del testo, così
-// non invade le righe sopra.
+// Maximum height of the signature: in a real signature field at least the
+// field's; on a printed blank line a multiple of the text size, so it does
+// not spill onto the lines above.
 function signatureBoxHeight(field: FormFieldInfo, rectHeight: number): number {
   if (field.source === "blank") {
     return (field.fontSize ?? DEFAULT_TEXT_SIZE) * BLANK_SIGNATURE_HEIGHT_RATIO;
@@ -324,15 +324,15 @@ function signatureBoxHeight(field: FormFieldInfo, rectHeight: number): number {
   return Math.max(rectHeight, MIN_FIELD_SIGNATURE_HEIGHT);
 }
 
-// Mette la firma nel rettangolo di un campo firma o di una riga vuota,
-// adattata in proporzione e appoggiata alla riga.
+// Puts the signature in the rectangle of a signature field or a blank line,
+// scaled proportionally and resting on the line.
 async function placeSignatureInField(field: FormFieldInfo, image: SignatureImage): Promise<void> {
   const pdfDocument = viewer.getDocument()!;
   const viewport = (await pdfDocument.getPage(field.pageIndex + 1)).getViewport({ scale: 1 });
   const [ax, ay] = viewport.convertToViewportPoint(field.rect[0], field.rect[1]);
   const [bx, by] = viewport.convertToViewportPoint(field.rect[2], field.rect[3]);
   const left = Math.min(ax, bx);
-  // Una firma a mano scende un po' sotto la riga: si imita.
+  // A handwritten signature drops a little below the line: imitate it.
   const sinkBelowLine = field.source === "blank" ? (field.fontSize ?? DEFAULT_TEXT_SIZE) * BLANK_SIGNATURE_SINK_RATIO : 0;
   const bottom = Math.max(ay, by) + sinkBelowLine;
   const boxWidth = Math.abs(bx - ax);
@@ -356,8 +356,8 @@ async function placeSignatureInField(field: FormFieldInfo, image: SignatureImage
   });
 }
 
-// Scrive un valore sopra una riga vuota stampata: appena sopra la linea,
-// nel corpo del testo circostante, rimpicciolito se non ci sta.
+// Writes a value over a printed blank line: just above the line, in the
+// size of the surrounding text, shrunk if it does not fit.
 async function placeTextOnBlank(field: FormFieldInfo, value: string): Promise<void> {
   const pdfDocument = viewer.getDocument()!;
   const viewport = (await pdfDocument.getPage(field.pageIndex + 1)).getViewport({ scale: 1 });
@@ -382,7 +382,7 @@ async function placeTextOnBlank(field: FormFieldInfo, value: string): Promise<vo
   });
 }
 
-// --- Compilazione: riconoscimento in locale o con Jev ---------------------------
+// --- Filling: local recognition or with Jev -------------------------------------
 
 async function recognizeFieldsWithJev(fields: FormFieldInfo[]): Promise<FieldDecision[]> {
   const { headings } = getStore();
@@ -394,8 +394,8 @@ async function recognizeFieldsWithJev(fields: FormFieldInfo[]): Promise<FieldDec
   return recognizeCombinedParts(decisions, headings);
 }
 
-// Seconda passata, solo se Jev ha visto campi con più informazioni insieme:
-// per ciascuno chiede quali intestazioni ne fanno parte.
+// Second pass, only if Jev saw fields with several pieces of information
+// together: for each one it asks which headings belong to it.
 async function recognizeCombinedParts(decisions: FieldDecision[], headings: Heading[]): Promise<FieldDecision[]> {
   const partsByDecision = new Map<FieldDecision, string[]>();
   for (const prepared of buildPartRequests(decisions, headings)) {
@@ -425,8 +425,8 @@ async function applyAutofill(result: AutofillResult): Promise<void> {
   showToast(`${total} campi compilati con il profilo «${result.profile.name}».${saved}`);
 }
 
-// I valori scritti nella revisione che il profilo non aveva: il documento è
-// già compilato, quindi un errore di salvataggio si segnala senza annullarlo.
+// The values typed in the review that the profile did not have: the document
+// is already filled, so a save error is reported without undoing it.
 async function saveProfileUpdates(result: AutofillResult): Promise<string> {
   const { profileUpdates } = result;
   if (!hasProfileUpdates(profileUpdates)) {
@@ -451,8 +451,8 @@ function countText(count: number, singular: string, plural: string): string {
   return `${count} ${count === 1 ? singular : plural}`;
 }
 
-// Motore scelto nelle Impostazioni, con il nome da mostrare nella revisione;
-// null se è Jev ma manca la chiave.
+// Engine chosen in Settings, with the name to show in the review;
+// null if it is Jev but the key is missing.
 async function describeEngine(): Promise<{ local: boolean; name: string } | null> {
   if (getRecognitionEngine() === "local") {
     return { local: true, name: "riconoscimento sul computer" };
@@ -504,7 +504,7 @@ async function autofill(): Promise<void> {
   }
 }
 
-// --- Profili nella barra ---------------------------------------------------------
+// --- Profiles in the toolbar -----------------------------------------------------
 
 function renderProfileSelect(): void {
   const { profiles, activeProfileId } = getStore();
@@ -513,7 +513,7 @@ function renderProfileSelect(): void {
   ui.profileSelect.disabled = options.length === 0;
 }
 
-// --- Collegamenti -----------------------------------------------------------------
+// --- Wiring -----------------------------------------------------------------------
 
 function bindViewerEvents(): void {
   viewer.eventBus.on("pagesinit", () => viewer.fitWidth());

@@ -1,10 +1,10 @@
-// Visualizzatore pdf.js: caricamento, zoom, pagine, moduli e testo libero.
+// pdf.js viewer: loading, zoom, pages, forms and free text.
 import * as pdfjs from "pdfjs-dist";
 import type { PDFDocumentLoadingTask, PDFDocumentProxy } from "pdfjs-dist";
 import workerUrl from "pdfjs-dist/build/pdf.worker.min.mjs?url";
 
-// pdf_viewer.mjs legge pdf.js da globalThis.pdfjsLib: va impostato prima
-// di importarlo, per questo l'import è dinamico.
+// pdf_viewer.mjs reads pdf.js from globalThis.pdfjsLib: it must be set before
+// importing it, which is why the import is dynamic.
 (globalThis as unknown as { pdfjsLib: typeof pdfjs }).pdfjsLib = pdfjs;
 pdfjs.GlobalWorkerOptions.workerSrc = workerUrl;
 const viewerModule = await import("pdfjs-dist/web/pdf_viewer.mjs");
@@ -24,8 +24,8 @@ export const pdfViewer = new PDFViewer({
   eventBus,
   linkService,
   annotationMode: pdfjs.AnnotationMode.ENABLE_FORMS,
-  // Testo e firme aggiunti li gestisce placements.ts: l'editor di pdf.js
-  // salverebbe annotazioni, che non tutti i lettori mostrano allo stesso modo.
+  // Added text and signatures are handled by placements.ts: the pdf.js editor
+  // would save annotations, which not every reader shows the same way.
   annotationEditorMode: pdfjs.AnnotationEditorType.DISABLE,
 });
 linkService.setViewer(pdfViewer);
@@ -93,15 +93,15 @@ export function fitWidth(): void {
   pdfViewer.currentScaleValue = "page-width";
 }
 
-// Altezza della pagina in punti PDF, come visualizzata (rotazione compresa).
+// Page height in PDF points, as displayed (rotation included).
 export function pageHeightPoints(pageIndex: number): number {
   const pageView = pdfViewer.getPageView(pageIndex);
   return pageView ? pageView.viewport.height / pageView.viewport.scale : 842;
 }
 
-// Scrive un valore in un campo del modulo: nello storage di pdf.js (che è
-// ciò che finisce nel file salvato) e, se la pagina è già disegnata, anche
-// nell'elemento a video.
+// Writes a value into a form field: into pdf.js's storage (which is what
+// ends up in the saved file) and, if the page is already drawn, also into
+// the on-screen element.
 export function setFieldValue(ids: string[], value: string): void {
   if (!currentDocument) {
     return;

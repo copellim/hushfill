@@ -1,5 +1,5 @@
-// Costruisce i byte del PDF da salvare: pdf.js scrive i campi compilati,
-// pdf-lib incide firme e testi aggiunti nel contenuto delle pagine.
+// Builds the bytes of the PDF to save: pdf.js writes the filled fields,
+// pdf-lib burns the added signatures and text into the page content.
 import type { PDFDocumentProxy } from "pdfjs-dist";
 import { PDFDocument, PDFField, PDFFont, PDFImage, PDFRef, StandardFonts, degrees, popGraphicsState, pushGraphicsState, rgb } from "pdf-lib";
 import { TEXT_BASELINE_RATIO, type ImagePlacement, type Placement, type TextPlacement } from "./placements";
@@ -20,8 +20,8 @@ interface DrawingResources {
   images: Map<string, PDFImage>;
 }
 
-// Racchiude il contenuto esistente in q…Q: se lascia la matrice grafica
-// modificata, ciò che si aggiunge dopo finirebbe spostato o scalato.
+// Wraps the existing content in q…Q: if it leaves the graphics matrix
+// modified, what is added afterwards would end up shifted or scaled.
 function isolateExistingContent(doc: PDFDocument, pageIndex: number): void {
   const page = doc.getPage(pageIndex);
   const start = doc.context.register(doc.context.contentStream([pushGraphicsState()]));
@@ -38,8 +38,8 @@ async function pageGeometry(pdfDocument: PDFDocumentProxy, pageIndex: number): P
   };
 }
 
-// Origine e rotazione in coordinate PDF di un punto e della direzione
-// "verso destra" a video: copre anche le pagine ruotate di 90/180/270 gradi.
+// Origin and rotation in PDF coordinates of a point and of the on-screen
+// "rightwards" direction: also covers pages rotated by 90/180/270 degrees.
 function anchor(geometry: PageGeometry, left: number, baseline: number, length: number): { x: number; y: number; angle: number } {
   const [x, y] = geometry.toPdf(left, baseline);
   const [toX, toY] = geometry.toPdf(left + length, baseline);
@@ -74,10 +74,10 @@ function drawText(resources: DrawingResources, geometry: PageGeometry, placement
   });
 }
 
-// removeField di pdf-lib trova la pagina del widget tramite la sua voce /P,
-// che dopo il salvataggio di pdf.js può mancare: la pagina resterebbe con un
-// riferimento a un oggetto cancellato. I widget si tolgono quindi a mano da
-// tutte le pagine prima di rimuovere il campo.
+// pdf-lib's removeField finds the widget's page through its /P entry,
+// which may be missing after pdf.js has saved: the page would be left with a
+// reference to a deleted object. The widgets are therefore removed by hand
+// from every page before removing the field.
 function detachWidgets(doc: PDFDocument, field: PDFField): void {
   const widgetRefs = new Set(field.acroField.getWidgets().map((widget) => doc.context.getObjectRef(widget.dict)));
   for (const page of doc.getPages()) {
@@ -116,7 +116,7 @@ async function loadForDrawing(bytes: Uint8Array): Promise<PDFDocument> {
 }
 
 export async function buildPdfBytes(pdfDocument: PDFDocumentProxy, placements: readonly Placement[]): Promise<Uint8Array> {
-  // Senza campi modificati non c'è nulla da scrivere: i byte originali bastano.
+  // With no modified fields there is nothing to write: the original bytes are enough.
   const withForms = pdfDocument.annotationStorage.size > 0 ? await pdfDocument.saveDocument() : await pdfDocument.getData();
   if (placements.length === 0) {
     return withForms;

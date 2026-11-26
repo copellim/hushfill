@@ -1,14 +1,14 @@
-// Aggiunte sulle pagine: firme (immagini) e testi. Posizione e dimensione
-// sono frazioni della pagina visualizzata, così restano corrette a ogni zoom.
-// Al salvataggio vengono incise nel contenuto della pagina (export.ts).
-// pdf.js svuota i nodi estranei di una pagina quando la ridisegna: lo strato
-// viene quindi ricreato a ogni "pagerendered".
+// Additions on the pages: signatures (images) and text. Position and size
+// are fractions of the displayed page, so they stay correct at every zoom.
+// On saving they are burnt into the page content (export.ts).
+// pdf.js empties a page's foreign nodes when it redraws it: the layer is
+// therefore recreated on every "pagerendered".
 import type { SignatureImage } from "./signature-dialog";
 
 interface PlacementBase {
   id: string;
   pageIndex: number;
-  // Angolo in alto a sinistra, in frazioni della pagina.
+  // Top-left corner, in fractions of the page.
   x: number;
   y: number;
 }
@@ -18,27 +18,26 @@ export interface ImagePlacement extends PlacementBase {
   image: SignatureImage;
   width: number;
   height: number;
-  // Campo del modulo che la firma sostituisce: i widget sono disegnati sopra
-  // il contenuto della pagina e la coprirebbero, quindi al salvataggio il
-  // campo viene tolto.
+  // Form field the signature replaces: widgets are drawn over the page
+  // content and would cover it, so on saving the field is removed.
   replacesFieldName?: string;
 }
 
 export interface TextPlacement extends PlacementBase {
   kind: "text";
   text: string;
-  // Corpo in punti PDF.
+  // Font size in PDF points.
   fontSize: number;
 }
 
 export type Placement = ImagePlacement | TextPlacement;
 type NewPlacement = Omit<ImagePlacement, "id"> | Omit<TextPlacement, "id">;
 
-// Il testo è disegnato in Helvetica nel PDF: a video si usa l'equivalente
-// metrico, così ciò che si vede è ciò che verrà salvato.
+// Text is drawn in Helvetica in the PDF: on screen the metric equivalent is
+// used, so what you see is what will be saved.
 export const TEXT_FONT_FAMILY = 'Helvetica, Arial, "Liberation Sans", sans-serif';
-// Distanza della linea di base dal bordo superiore, in frazioni del corpo
-// (line-height 1, ascendente di Helvetica/Arial).
+// Distance of the baseline from the top edge, in fractions of the font size
+// (line-height 1, Helvetica/Arial ascender).
 export const TEXT_BASELINE_RATIO = 0.8;
 const MIN_WIDTH_FRACTION = 0.03;
 const MIN_FONT_SIZE = 5;
@@ -127,7 +126,7 @@ function applyGeometry(element: HTMLElement, placement: Placement): void {
     element.style.width = `${placement.width * 100}%`;
     element.style.height = `${placement.height * 100}%`;
   } else {
-    // --total-scale-factor è la scala corrente di pdf.js: 1 pt = 1px × scala.
+    // --total-scale-factor is pdf.js's current scale: 1 pt = 1px × scale.
     element.style.fontSize = `calc(var(--total-scale-factor) * ${placement.fontSize}px)`;
   }
 }
@@ -221,7 +220,7 @@ function resize(placement: Placement, start: Placement, dx: number, bounds: DOMR
     placement.width = width;
     placement.height = (width * bounds.width) / aspect / bounds.height;
   } else if (placement.kind === "text" && start.kind === "text") {
-    // Il trascinamento orizzontale scala il corpo in proporzione alla pagina.
+    // Horizontal dragging scales the font size in proportion to the page.
     const pageHeight = pageHeightOf(placement.pageIndex);
     const pointsPerPixel = pageHeight / bounds.height;
     const grown = start.fontSize + dx * bounds.width * pointsPerPixel * 0.5;

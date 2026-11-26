@@ -83,7 +83,7 @@ input.invalid {
   border-color: var(--danger);
 }
 
-/* Valori calcolati (data di oggi, firma): si vedono ma non si scrivono. */
+/* Computed values (today's date, signature): visible but not editable. */
 input[readonly] {
   color: var(--muted);
   border-style: dashed;
@@ -98,7 +98,7 @@ input[readonly] {
   margin: 0;
 }
 
-/* --- Barra --- */
+/* --- Toolbar --- */
 
 #toolbar {
   position: fixed;
@@ -141,7 +141,7 @@ input[readonly] {
   text-overflow: ellipsis;
 }
 
-/* --- Visualizzatore --- */
+/* --- Viewer --- */
 
 #viewer-container {
   position: absolute;
@@ -177,7 +177,7 @@ input[readonly] {
   pointer-events: auto;
 }
 
-/* --- Firme e testi aggiunti sulle pagine --- */
+/* --- Signatures and text added on the pages --- */
 
 .place-layer {
   position: absolute;
@@ -255,7 +255,7 @@ input[readonly] {
   color: #fff;
 }
 
-/* --- Finestre --- */
+/* --- Dialogs --- */
 
 dialog {
   background: var(--panel);
@@ -349,7 +349,7 @@ label[hidden] {
   white-space: nowrap;
 }
 
-/* Scacchiera dietro l'anteprima: mostra cosa è diventato trasparente. */
+/* Checkerboard behind the preview: shows what has become transparent. */
 .sign-import {
   display: flex;
   align-items: center;
@@ -377,7 +377,7 @@ label[hidden] {
   margin: 0;
 }
 
-/* Profili */
+/* Profiles */
 
 .profiles-layout {
   display: grid;
@@ -474,7 +474,7 @@ label[hidden] {
   margin-bottom: 8px;
 }
 
-/* Revisione compilazione */
+/* Fill review */
 
 .autofill-head,
 .autofill-row {
@@ -552,7 +552,7 @@ label[hidden] {
   color: var(--muted);
 }
 
-/* --- Avvisi --- */
+/* --- Notices --- */
 
 #busy {
   position: fixed;
@@ -593,7 +593,7 @@ label[hidden] {
   border-color: var(--danger);
 }
 
-/* --- Impostazioni --- */
+/* --- Settings --- */
 
 .note {
   color: var(--muted);

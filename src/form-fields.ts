@@ -1,8 +1,8 @@
-// Estrae dal PDF ciò che va compilato, con il contesto che serve a Jev:
-// - i campi AcroForm (testo e firma), quando il PDF è un modulo vero;
-// - le righe vuote stampate nel testo ("Il sottoscritto ________",
-//   "CAP ......") o disegnate come linee, quando il modulo è solo da stampare
-//   e compilare a mano. Diventano campi "blank" compilati scrivendo sopra.
+// Extracts from the PDF what needs filling, with the context Jev needs:
+// - the AcroForm fields (text and signature), when the PDF is a real form;
+// - the blank lines printed in the text ("Il sottoscritto ________",
+//   "CAP ......") or drawn as lines, when the form is only meant to be printed
+//   and filled in by hand. They become "blank" fields filled by writing over them.
 import { AnnotationMode, OPS, type PDFDocumentProxy, type PDFPageProxy } from "pdfjs-dist";
 import type { TextItem } from "pdfjs-dist/types/src/display/api";
 import { findHorizontalRules, type HorizontalRule } from "./drawn-lines";
@@ -18,16 +18,16 @@ import {
 } from "./field-labels";
 import type { FormFieldInfo } from "./jev";
 
-// Font usato per stimare dove cade la riga vuota dentro una stringa: i
-// moduli usano quasi sempre Helvetica/Arial, e serve solo la proporzione.
+// Font used to estimate where the blank line falls inside a string:
+// forms almost always use Helvetica/Arial, and only the proportion matters.
 const MEASURE_FONT = "Helvetica, Arial, sans-serif";
-// Righe disegnate: corpo di scrittura stimato e limiti di plausibilità.
+// Drawn lines: estimated writing size and plausibility limits.
 const DEFAULT_FONT_SIZE = 10;
 const MIN_DRAWN_FONT_SIZE = 8;
 const MAX_DRAWN_FONT_SIZE = 12;
-// Testo che copre almeno tanti punti di una riga ci sta appoggiato sopra.
+// Text covering at least this many points of a line is sitting on it.
 const UNDERLINE_MIN_OVERLAP = 10;
-// Una riga lunga quasi quanto la pagina è un separatore, non uno spazio.
+// A line almost as long as the page is a separator, not a space.
 const MAX_RULE_PAGE_FRACTION = 0.9;
 
 interface WidgetAnnotation {
@@ -83,9 +83,9 @@ function measure(text: string): number {
   return measureContext.measureText(text).width;
 }
 
-// Etichetta di una riga vuota: il testo che la precede nella stessa stringa
-// (fino alla riga vuota precedente); se la stringa inizia con la riga vuota,
-// il testo vicino sulla pagina.
+// Label of a blank line: the text preceding it in the same string
+// (up to the previous blank line); if the string starts with the blank line,
+// the nearby text on the page.
 function blankLabel(item: TextItem, start: number, previousEnd: number, texts: PlacedText[], rect: Rect): string {
   const before = withoutBlanks(item.str.slice(previousEnd, start));
   if (before) {
@@ -127,16 +127,16 @@ function intersects(a: Rect, b: Rect): boolean {
   return a[0] < b[2] && b[0] < a[2] && a[1] < b[3] && b[1] < a[3];
 }
 
-// Corpo del testo tipico della pagina (mediana delle altezze), per dare alle
-// righe disegnate, che non hanno un font, uno spazio di scrittura plausibile.
+// Typical text size of the page (median of the heights), to give the drawn
+// lines, which have no font, a plausible writing space.
 function typicalFontSize(texts: PlacedText[]): number {
   const heights = texts.map((t) => t.top - t.bottom).filter((h) => h > 0).sort((a, b) => a - b);
   const median = heights.length > 0 ? heights[Math.floor(heights.length / 2)] : DEFAULT_FONT_SIZE;
   return Math.min(MAX_DRAWN_FONT_SIZE, Math.max(MIN_DRAWN_FONT_SIZE, median));
 }
 
-// Una riga con del testo appoggiato sopra è una sottolineatura o una riga
-// già compilata nel documento: non va proposta.
+// A line with text sitting on it is an underline or a line already filled
+// in the document: it must not be proposed.
 function hasTextOnTop(rule: HorizontalRule, texts: PlacedText[], fontSize: number): boolean {
   const minOverlap = Math.min(UNDERLINE_MIN_OVERLAP, (rule.x2 - rule.x1) / 2);
   return texts.some((t) => {
@@ -146,7 +146,7 @@ function hasTextOnTop(rule: HorizontalRule, texts: PlacedText[], fontSize: numbe
 }
 
 async function drawnBlanks(page: PDFPageProxy, texts: PlacedText[], pageIndex: number): Promise<FormFieldInfo[]> {
-  // Senza annotazioni: i bordi dei widget AcroForm non sono righe stampate.
+  // Without annotations: the borders of AcroForm widgets are not printed lines.
   const operators = await page.getOperatorList({ annotationMode: AnnotationMode.DISABLE });
   const [, , pageRight] = page.view;
   const rules = findHorizontalRules(operators.fnArray, operators.argsArray, OPS, pageRight * MAX_RULE_PAGE_FRACTION);
@@ -178,11 +178,11 @@ async function fieldsOfPage(page: PDFPageProxy, pageIndex: number): Promise<Form
   );
   const { items, placed } = await readTexts(page);
   const formFields = acroFormFields(widgets, placed, pageIndex);
-  // Una riga stampata sotto un campo AcroForm è già coperta dal campo.
+  // A line printed under an AcroForm field is already covered by the field.
   const textBlanks = items
     .flatMap((item) => blanksOfItem(item, placed, pageIndex))
     .filter((blank) => !formFields.some((field) => intersects(field.rect, blank.rect)));
-  // Una riga disegnata sotto "_____" o sotto un campo AcroForm è la stessa riga.
+  // A line drawn under "_____" or under an AcroForm field is the same line.
   const covered = [...formFields, ...textBlanks];
   const drawn = (await drawnBlanks(page, placed, pageIndex)).filter(
     (blank) => !covered.some((field) => intersects(field.rect, blank.rect)),
@@ -190,14 +190,14 @@ async function fieldsOfPage(page: PDFPageProxy, pageIndex: number): Promise<Form
   return [...formFields, ...sortByReadingOrder([...textBlanks, ...drawn])];
 }
 
-// Dall'alto in basso, poi da sinistra: le righe disegnate arrivano in un
-// ordine diverso da quelle nel testo, e la revisione va letta come il foglio.
+// Top to bottom, then from the left: drawn lines arrive in a different
+// order from those in the text, and the review must read like the sheet.
 function sortByReadingOrder(fields: FormFieldInfo[]): FormFieldInfo[] {
   return [...fields].sort((a, b) => b.rect[1] - a.rect[1] || a.rect[0] - b.rect[0]);
 }
 
-// Più widget con lo stesso nome sono lo stesso campo logico (es. il nome
-// ripetuto in testa a ogni pagina): una sola domanda, tutti gli id compilati.
+// Several widgets with the same name are the same logical field (e.g. the name
+// repeated at the top of every page): a single question, all ids filled.
 function mergeByName(fields: FormFieldInfo[]): FormFieldInfo[] {
   const merged: FormFieldInfo[] = [];
   const byName = new Map<string, FormFieldInfo>();

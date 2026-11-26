@@ -47,7 +47,7 @@ function targetOf(label: string, overrides: Partial<FormFieldInfo> = {}): string
   return recognize(label, overrides).target;
 }
 
-test("la normalizzazione scioglie sigle, abbreviazioni e forme di genere", () => {
+test("normalisation expands acronyms, abbreviations and gendered forms", () => {
   assert.deepEqual(tokenize("C.F."), ["codice", "fiscale"]);
   assert.deepEqual(tokenize("Nato/a a"), ["nato", "a"]);
   assert.deepEqual(tokenize("La sottoscritta"), ["il", "sottoscritto"]);
@@ -56,7 +56,7 @@ test("la normalizzazione scioglie sigle, abbreviazioni e forme di genere", () =>
   assert.deepEqual(tokenize("Città"), ["citta"]);
 });
 
-test("le etichette tipiche dei moduli italiani vanno all'intestazione giusta", () => {
+test("typical labels of Italian forms go to the right heading", () => {
   const cases: [string, string][] = [
     ["a sinistra: Cognome", "cognome"],
     ["a sinistra: Nome", "nome"],
@@ -80,12 +80,12 @@ test("le etichette tipiche dei moduli italiani vanno all'intestazione giusta", (
   }
 });
 
-test("l'indizio più vicino al campo vince su quelli più lontani", () => {
-  // Testo a sinistra di un AcroForm che raccoglie anche l'etichetta del campo precedente.
+test("the clue closest to the field wins over those further away", () => {
+  // Text to the left of an AcroForm that also picks up the previous field's label.
   assert.equal(targetOf("a sinistra: Cognome Nome", { source: "acroform" }), "nome");
 });
 
-test("i campi combinati escono con le parti nell'ordine del modulo", () => {
+test("combined fields come out with the parts in the form's order", () => {
   const cases: [string, string[]][] = [
     ["a sinistra: Il/La sottoscritto/a", ["nome", "cognome"]],
     ["a sinistra: Cognome e nome", ["cognome", "nome"]],
@@ -99,49 +99,49 @@ test("i campi combinati escono con le parti nell'ordine del modulo", () => {
   }
 });
 
-test("la scomposizione generica regge le intestazioni create dall'utente", () => {
+test("generic splitting copes with user-created headings", () => {
   const decision = recognize("a sinistra: Nome e numero tessera");
   assert.equal(decision.target, COMBINED_CHOICE);
   assert.deepEqual(decision.parts, ["nome", "tessera"]);
 });
 
-test("le intestazioni create dall'utente si abbinano per parole, senza confondere quelle simili", () => {
+test("user-created headings are matched by words, without confusing similar ones", () => {
   assert.equal(targetOf("a sinistra: Patente n."), "patente");
   assert.equal(targetOf("a sinistra: Numero di telefono"), "telefono");
   assert.equal(targetOf("a sinistra: Numero tessera sanitaria"), "tessera");
 });
 
-test("firma da testo e da campo firma", () => {
+test("signature from text and from a signature field", () => {
   assert.equal(targetOf("sotto: Firma del dichiarante"), SIGNATURE_CHOICE);
   assert.equal(targetOf("", { source: "acroform", kind: "signature", fieldName: "Signature1" }), SIGNATURE_CHOICE);
 });
 
-test("campi non personali o senza indizi restano senza proposta", () => {
+test("non-personal fields or fields without clues are left without a proposal", () => {
   for (const label of ["a sinistra: PEC", "sopra: Spazio riservato all'ufficio", "a sinistra: Protocollo n.", "a sinistra: Motivo della richiesta", ""]) {
     assert.equal(targetOf(label), null, label);
   }
 });
 
-test("i dati di terzi negli esempi restano senza proposta, e somiglianti generalizzano", () => {
+test("third-party data in the examples is left without a proposal, and similar labels generalise", () => {
   assert.equal(targetOf("a sinistra: Cognome del minore"), null);
   assert.equal(targetOf("a sinistra: Cognome della minore"), null);
   assert.equal(targetOf("a sinistra: Cognome"), "cognome");
 });
 
-test("un esempio più lungo e specifico vince su uno corto", () => {
-  // "il" da solo è la data di nascita, "rilasciato il" no.
+test("a longer, more specific example beats a short one", () => {
+  // "il" alone is the date of birth, "rilasciato il" (issued on) is not.
   assert.equal(targetOf("a sinistra: rilasciato il"), null);
 });
 
-test("il nome tecnico e la lunghezza massima di un AcroForm aiutano", () => {
+test("the technical name and maximum length of an AcroForm help", () => {
   assert.equal(targetOf("", { source: "acroform", fieldName: "txtCodiceFiscale" }), "cf");
   assert.equal(targetOf("", { source: "acroform", fieldName: "dataNascita" }), "nascita-data");
-  // Un campo da 2 caratteri non può contenere il codice fiscale.
+  // A 2-character field cannot hold the tax code.
   assert.notEqual(targetOf("a sinistra: Codice fiscale", { source: "acroform", maxLen: 2 }), "cf");
   assert.equal(targetOf("a sinistra: Codice fiscale", { source: "acroform", maxLen: 16 }), "cf");
 });
 
-test("senza l'intestazione nel profilo la parte di un combinato si toglie", () => {
+test("without the heading in the profile the part of a combined field is removed", () => {
   const withoutName = headings.filter((heading) => heading.id !== "nome");
   const [decision] = recognizeFieldsLocally([field("a sinistra: Nome e cognome")], withoutName);
   assert.equal(decision.target, "cognome");

@@ -1,4 +1,4 @@
-// Ponte esposto da electron/preload.cjs.
+// Bridge exposed by electron/preload.cjs.
 import type { JevRequest, JevResponse } from "./jev";
 
 export interface PdfFile {
@@ -18,19 +18,19 @@ export interface JevStatus {
   baseUrl: string;
 }
 
-// Impostazioni di Jev come le vede la finestra: la chiave salvata non
-// arriva mai al renderer, solo se c'è.
+// Jev settings as the window sees them: the saved key never reaches the
+// renderer, only whether there is one.
 export interface JevSettingsView {
   hasSavedKey: boolean;
   model: string;
   baseUrl: string;
   defaults: { model: string; baseUrl: string };
-  // Variabili TYPESAFE_* impostate nell'ambiente, che hanno la precedenza.
+  // TYPESAFE_* variables set in the environment, which take precedence.
   fromEnvironment: { apiKey: boolean; model: boolean; baseUrl: boolean };
   storageFile: string;
 }
 
-// Valori del modulo. apiKey vuota = lascia la chiave salvata com'è.
+// Form values. Empty apiKey = leave the saved key as it is.
 export interface JevSettingsForm {
   apiKey: string;
   removeKey: boolean;

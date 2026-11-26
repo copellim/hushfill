@@ -1,19 +1,19 @@
-// Etichetta di un campo: il testo stampato vicino, letto dalle posizioni del
-// testo sulla pagina. Senza pdf.js né canvas, così si prova da Node.
+// Label of a field: the text printed nearby, read from the positions of the
+// text on the page. Without pdf.js or canvas, so it can be tested from Node.
 
-// Distanze in punti PDF entro cui un testo è considerato etichetta del campo.
+// Distances in PDF points within which a text is considered the field's label.
 const LEFT_REACH = 220;
 const ABOVE_REACH = 26;
 const BELOW_REACH = 16;
 export const VERTICAL_TOLERANCE = 3;
 export const MAX_LABEL_CHARS = 120;
-// Oltre questo spazio, in proporzione al corpo del testo, due pezzi della
-// stessa riga sono colonne o celle diverse, non parole della stessa frase.
+// Beyond this gap, in proportion to the text size, two pieces of the same
+// line are different columns or cells, not words of the same sentence.
 const CONTINUOUS_GAP_FACTOR = 1.5;
-// Distanza entro cui un campo o una riga sono "al margine" del testo della pagina.
+// Distance within which a field or a line is "at the margin" of the page's text.
 const MARGIN_SLACK = 20;
-// Una riga vuota è una sequenza di trattini bassi o di puntini abbastanza
-// lunga da non essere punteggiatura.
+// A blank line is a sequence of underscores or dots long enough not to be
+// punctuation.
 export const BLANK_PATTERN = /_{3,}|\.{5,}|…{2,}/g;
 
 export interface PlacedText {
@@ -30,9 +30,9 @@ function overlapsHorizontally(text: PlacedText, x1: number, x2: number): boolean
   return text.right > x1 && text.left < x2;
 }
 
-// Testo uguale entro questo scarto è la stessa scritta stampata due volte,
-// il finto grassetto di alcuni programmi: senza toglierla l'etichetta
-// diventa "i i documenti documenti".
+// Identical text within this offset is the same writing printed twice,
+// the fake bold of some programs: without removing it the label
+// becomes "i i documenti documenti".
 const DUPLICATE_OFFSET = 1;
 
 export function withoutDuplicates(texts: PlacedText[]): PlacedText[] {
@@ -52,11 +52,11 @@ export function withoutBlanks(text: string): string {
   return text.replace(BLANK_PATTERN, " ").replace(/\s+/g, " ").trim();
 }
 
-// Un campo compilabile messo sopra i trattini di "Tel. ________": il testo
-// parte a sinistra del campo e gli passa sotto. Conta la parte prima della
-// riga vuota coperta dal campo; un testo senza righe vuote sotto il campo è
-// un paragrafo, non un'etichetta. Le posizioni dei caratteri sono stimate in
-// proporzione alla lunghezza: basta per dire quale riga vuota è coperta.
+// A fillable field placed over the dashes of "Tel. ________": the text
+// starts to the left of the field and runs under it. What counts is the part
+// before the blank line covered by the field; a text with no blank lines under
+// the field is a paragraph, not a label. Character positions are estimated in
+// proportion to the length: enough to tell which blank line is covered.
 function textBeforeCoveredBlank(text: PlacedText, x1: number, x2: number): string {
   const charWidth = (text.right - text.left) / text.text.length;
   let covered = { overlap: 0, index: -1 };
@@ -71,24 +71,24 @@ function textBeforeCoveredBlank(text: PlacedText, x1: number, x2: number): strin
   return covered.index < 0 ? "" : withoutBlanks(text.text.slice(0, covered.index));
 }
 
-// Un testo che passa sotto il campo conta solo se sta sulla riga su cui il
-// campo poggia: quella del testo vicino con la base più vicina al bordo
-// inferiore del campo. Un campo alto copre in parte anche la riga sotto o
-// sopra, che può avere i suoi trattini sotto il campo ("Mutuo Fondiario
-// ____" sotto "del sig. ____", dove i puntini del campo cominciano proprio
-// dove comincia il campo e quindi non gli passano sotto).
+// A text running under the field counts only if it is on the line the
+// field rests on: that of the nearby text whose baseline is closest to the
+// field's bottom edge. A tall field also partly covers the line below or
+// above, which may have its own dashes under the field ("Mutuo Fondiario
+// ____" under "del sig. ____", where the field's dots start exactly
+// where the field starts and so do not run under it).
 function crossingOnTheFieldLine(crossing: PlacedText[], nearby: PlacedText[], y1: number): PlacedText[] {
   const closest = Math.min(...nearby.map((t) => Math.abs(t.bottom - y1)));
   return crossing.filter((t) => Math.abs(t.bottom - y1) - closest < VERTICAL_TOLERANCE);
 }
 
-// Testo sulla stessa riga a sinistra, preso dal più vicino al campo
-// all'indietro: "Il sottoscritto ____ nato a ____" dà "...nato a".
+// Text on the same line to the left, taken backwards from the one closest
+// to the field: "Il sottoscritto ____ nato a ____" gives "...nato a".
 function textOnTheLeft(texts: PlacedText[], [x1, y1, x2, y2]: Rect): string {
   const band = texts.filter((t) => t.top > y1 - VERTICAL_TOLERANCE && t.bottom < y2 + VERTICAL_TOLERANCE && x1 - t.right < LEFT_REACH);
   const before = band.filter((t) => t.right <= x1 + VERTICAL_TOLERANCE).map((t) => ({ right: t.right, text: withoutBlanks(t.text) }));
-  // Vicini sono anche i testi che cominciano sopra il campo, come i
-  // puntini di una riga vuota: dicono su quale riga il campo poggia.
+  // Texts that start over the field also count as nearby, like the
+  // dots of a blank line: they tell which line the field rests on.
   const nearby = texts.filter((t) => t.top > y1 - VERTICAL_TOLERANCE && t.bottom < y2 + VERTICAL_TOLERANCE && t.right > x1 - LEFT_REACH && t.left < x2);
   const crossing = crossingOnTheFieldLine(
     band.filter((t) => t.right > x1 + VERTICAL_TOLERANCE && t.left < x1),
@@ -106,8 +106,8 @@ function textOnTheLeft(texts: PlacedText[], [x1, y1, x2, y2]: Rect): string {
   return label.slice(-MAX_LABEL_CHARS);
 }
 
-// Riga di testo più vicina sopra o sotto il campo, che lo sovrapponga
-// in orizzontale. Restituisce anche la distanza per scegliere la più vicina.
+// Nearest line of text above or below the field that overlaps it
+// horizontally. Also returns the distance, to choose the nearest one.
 function lineNear(texts: PlacedText[], [x1, y1, x2, y2]: Rect, where: "above" | "below"): { text: string; distance: number } | null {
   const candidates = texts
     .filter((t) => overlapsHorizontally(t, x1, x2))
@@ -126,20 +126,20 @@ function lineNear(texts: PlacedText[], [x1, y1, x2, y2]: Rect, where: "above" | 
     .map((t) => withoutBlanks(t.text))
     .join(" ")
     .trim();
-  // Sopra, la parte più vicina al campo nel filo del testo è la fine della
-  // riga; sotto, l'inizio.
+  // Above, the part closest to the field in the flow of the text is the end of
+  // the line; below, the beginning.
   const kept = where === "above" ? text.slice(-MAX_LABEL_CHARS) : text.slice(0, MAX_LABEL_CHARS);
   return text ? { text: kept, distance: nearest } : null;
 }
 
-// Un campo a capo, sotto una frase che continua oltre la sua fine ("…a mezzo
-// posta elettronica certificata"): la parte che dice cosa scrivere è la fine
-// della riga sopra. Vale solo se il campo comincia al margine sinistro del
-// testo, la riga sopra arriva al margine destro ed è testo continuo, senza
-// righe vuote. Le griglie non passano: le intestazioni stanno a metà pagina
-// o finiscono presto, e lo spazio fra due celle vicine può essere stretto
-// come quello fra due parole. Una riga sopra con righe vuote ha altri campi,
-// e la sua fine è l'etichetta di un altro campo.
+// A field that wraps, under a sentence continuing past its end ("…a mezzo
+// posta elettronica certificata"): the part that says what to write is the
+// end of the line above. It applies only if the field starts at the left
+// margin of the text, the line above reaches the right margin and is
+// continuous text, without blank lines. Grids do not pass: their headings sit
+// mid-page or end early, and the gap between two neighbouring cells can be as
+// narrow as the one between two words. A line above with blank lines has
+// other fields, and its end is the label of another field.
 function continueToTheRight(line: PlacedText[], texts: PlacedText[], x1: number): PlacedText[] {
   const marginLeft = Math.min(...texts.map((t) => t.left));
   const marginRight = Math.max(...texts.map((t) => t.right));
@@ -164,8 +164,8 @@ function continueToTheRight(line: PlacedText[], texts: PlacedText[], x1: number)
   return reachesRightMargin && isRunningText ? continued : line;
 }
 
-// Un solo indizio, il più vicino: aggiungere la riga sopra quando c'è già
-// un'etichetta a sinistra confonde (la riga sopra appartiene a un altro campo).
+// A single clue, the nearest: adding the line above when there is already a
+// label to the left confuses things (the line above belongs to another field).
 export function describeSurroundings(texts: PlacedText[], rect: Rect): string {
   const left = textOnTheLeft(texts, rect);
   if (left) {

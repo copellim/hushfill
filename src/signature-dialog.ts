@@ -1,6 +1,6 @@
-// Finestra di creazione della firma: disegnata a mano, scritta in corsivo o
-// importata da un'immagine. Restituisce sempre un PNG (l'unico formato con
-// trasparenza che l'export incorpora) ritagliato sull'ingombro reale.
+// Signature creation window: drawn by hand, typed in cursive or imported
+// from an image. It always returns a PNG (the only format with transparency
+// that the export embeds) cropped to its real bounding box.
 import "@fontsource/dancing-script/600.css";
 
 export interface SignatureImage {
@@ -19,16 +19,16 @@ const TYPED_FONT = '600 140px "Dancing Script"';
 const TYPED_CANVAS_HEIGHT = 260;
 const TYPED_MARGIN = 40;
 const TRIM_PADDING = 8;
-const INK_MIN_ALPHA = 64; // su 255
-const INK_MIN_PIXELS = 3; // per riga o colonna
-// Immagini importate: lato massimo dopo il ridimensionamento (una foto da
-// 4000 px renderebbe pesanti profilo e PDF senza guadagno visibile).
+const INK_MIN_ALPHA = 64; // out of 255
+const INK_MIN_PIXELS = 3; // per row or column
+// Imported images: maximum side after resizing (a 4000 px photo would make
+// the profile and the PDF heavy with no visible gain).
 const IMPORT_MAX_WIDTH = 1600;
 const IMPORT_MAX_HEIGHT = 800;
-// SVG senza dimensioni proprie.
+// SVG without its own dimensions.
 const IMPORT_FALLBACK_SIZE = { width: 1200, height: 400 };
-// Sfondo chiaro reso trasparente: sopra la soglia alta il pixel sparisce,
-// sotto quella bassa resta pieno, in mezzo sfuma (bordi del tratto, rumore JPEG).
+// Light background made transparent: above the high threshold the pixel vanishes,
+// below the low one it stays solid, in between it fades (stroke edges, JPEG noise).
 const BACKGROUND_FULL = 235;
 const BACKGROUND_START = 180;
 
@@ -53,7 +53,7 @@ const context = canvas.getContext("2d")!;
 
 let activeTab: Tab = "draw";
 let hasStrokes = false;
-// Immagine importata già decodificata e ridimensionata, sfondo originale.
+// Imported image already decoded and resized, original background.
 let importedCanvas: HTMLCanvasElement | null = null;
 let resolveDialog: ((value: SignatureResult | null) => void) | null = null;
 
@@ -68,7 +68,7 @@ function switchTab(tab: Tab): void {
   if (tab === "type") {
     textInput.focus();
   }
-  // L'immagine importata tiene i suoi colori.
+  // The imported image keeps its colours.
   colorLabel.hidden = tab === "import";
   refreshOkButton();
 }
@@ -94,7 +94,7 @@ function clearImport(): void {
   refreshOkButton();
 }
 
-// "Cancella" svuota solo la scheda in uso.
+// "Cancella" (clear) empties only the tab in use.
 function clearActiveTab(): void {
   if (activeTab === "draw") {
     clearCanvas();
@@ -107,7 +107,7 @@ function clearActiveTab(): void {
   }
 }
 
-// Decodifica con <img>, che a differenza di createImageBitmap legge anche gli SVG.
+// Decodes with <img>, which unlike createImageBitmap also reads SVGs.
 async function decodeImage(file: File): Promise<HTMLImageElement> {
   const url = URL.createObjectURL(file);
   try {
@@ -137,9 +137,9 @@ function rasterize(image: HTMLImageElement): HTMLCanvasElement {
   return out;
 }
 
-// Una firma scansionata o fotografata su carta bianca: lo sfondo chiaro
-// diventa trasparente in proporzione alla luminosità, così il tratto resta
-// morbido e il foglio sotto si vede.
+// A signature scanned or photographed on white paper: the light background
+// becomes transparent in proportion to its brightness, so the stroke stays
+// smooth and the sheet underneath shows through.
 function withTransparentBackground(source: HTMLCanvasElement): HTMLCanvasElement {
   const out = document.createElement("canvas");
   out.width = source.width;
@@ -209,7 +209,7 @@ function setupImport(): void {
   });
   importDrop.addEventListener("dragleave", () => importDrop.classList.remove("over"));
   importDrop.addEventListener("drop", (event) => {
-    // Non deve arrivare al gestore della finestra, che aprirebbe i PDF.
+    // It must not reach the window's handler, which would open the PDFs.
     event.preventDefault();
     event.stopPropagation();
     importDrop.classList.remove("over");
@@ -258,7 +258,7 @@ function setupDrawing(): void {
     if (!last) {
       return;
     }
-    // Gli eventi coalescenti danno una linea fluida anche con mouse veloci.
+    // Coalesced events give a smooth line even with fast mouse movements.
     for (const sample of event.getCoalescedEvents?.() ?? [event]) {
       last = drawSegment(last, sample);
     }
@@ -270,9 +270,9 @@ function setupDrawing(): void {
   canvas.addEventListener("pointercancel", stop);
 }
 
-// Righe e colonne contano come inchiostro solo con abbastanza pixel ben
-// visibili: il rumore di una scansione (puntini isolati, quasi trasparenti
-// dopo aver tolto lo sfondo) non deve allargare il ritaglio.
+// Rows and columns count as ink only with enough clearly visible pixels:
+// the noise of a scan (isolated dots, almost transparent after removing the
+// background) must not widen the crop.
 function findInkBounds(source: HTMLCanvasElement): { minX: number; minY: number; maxX: number; maxY: number } | null {
   const { width, height } = source;
   const pixels = source.getContext("2d")!.getImageData(0, 0, width, height).data;
@@ -294,8 +294,8 @@ function findInkBounds(source: HTMLCanvasElement): { minX: number; minY: number;
   return { minX: columns[0], minY: rows[0], maxX: columns.at(-1)!, maxY: rows.at(-1)! };
 }
 
-// Ritaglia i margini trasparenti, così la firma si posiziona e si
-// ridimensiona sul suo ingombro reale.
+// Crops the transparent margins, so the signature is placed and resized
+// on its real bounding box.
 function trimToInk(source: HTMLCanvasElement): SignatureImage | null {
   const bounds = findInkBounds(source);
   if (!bounds) {
@@ -319,7 +319,7 @@ async function renderTypedSignature(text: string): Promise<SignatureImage | null
   ctx.font = TYPED_FONT;
   scratch.width = Math.ceil(ctx.measureText(text).width) + TYPED_MARGIN * 2;
   scratch.height = TYPED_CANVAS_HEIGHT;
-  // Cambiare le dimensioni del canvas azzera il contesto: si reimposta.
+  // Changing the canvas size resets the context: set it up again.
   ctx.font = TYPED_FONT;
   ctx.fillStyle = colorSelect.value;
   ctx.textBaseline = "middle";
@@ -373,7 +373,7 @@ export function initSignatureDialog(): void {
   });
 }
 
-// profileName: profilo a cui proporre di salvare la firma; null nasconde l'opzione.
+// profileName: profile to offer saving the signature to; null hides the option.
 export function askForSignature(options: { profileName: string | null; okLabel: string }): Promise<SignatureResult | null> {
   clearCanvas();
   clearImport();

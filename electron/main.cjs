@@ -1,6 +1,6 @@
-// Processo principale: finestre, apertura dei file passati dal sistema
-// (riga di comando, "Apri con", doppio clic), accesso al disco, profili
-// cifrati col portachiavi di sistema e chiamate a Jev con la chiave API.
+// Main process: windows, opening the files passed by the system
+// (command line, "Open with", double click), disk access, profiles
+// encrypted with the system keyring and calls to Jev with the API key.
 const { app, BrowserWindow, ipcMain, dialog, Menu, shell, safeStorage } = require("electron");
 const path = require("node:path");
 const fs = require("node:fs");
@@ -9,11 +9,11 @@ const { detectPasswordStore } = require("./keyring.cjs");
 
 const DEV_URL = process.env.VITE_DEV_SERVER_URL;
 
-// Jev: la chiave si imposta dalla finestra Impostazioni ed è salvata cifrata
-// col portachiavi; resta nel processo principale, il renderer non la rilegge
-// mai. Le variabili TYPESAFE_* dell'ambiente, se presenti, hanno la
-// precedenza (utile in sviluppo). Modello fissato perché l'alias jev-latest
-// cambia a ogni rilascio.
+// Jev: the key is set from the Settings window and saved encrypted with the
+// keyring; it stays in the main process, the renderer never reads it back.
+// The TYPESAFE_* environment variables, when present, take precedence
+// (useful in development). Model pinned because the jev-latest alias
+// changes with every release.
 const JEV_DEFAULT_BASE_URL = "https://api.typesafe.ai";
 const JEV_DEFAULT_MODEL = "jev-1.14.0";
 const JEV_TIMEOUT_MS = 30_000;
@@ -22,32 +22,32 @@ const LOOPBACK_HOSTS = new Set(["localhost", "127.0.0.1", "[::1]"]);
 const PROFILES_FILE_NAME = "profiles.enc";
 const JEV_SETTINGS_FILE_NAME = "jev.enc";
 
-// L'app si chiamava "PDF Firma". safeStorage lega la chiave al nome dell'app
-// (su Linux la voce "<nome> Safe Storage" del portachiavi, su macOS quella
-// del Portachiavi), quindi Hushfill non sa decifrare i file vecchi. Al primo
-// avvio rilancia sé stesso con lo switch qui sotto e il nome vecchio: quel
-// processo legge i file della vecchia cartella dati e li passa in chiaro su
-// una pipe (fd 3), mai su disco; questo li ricifra con la chiave nuova.
+// The app used to be called "PDF Firma". safeStorage ties the key to the app's
+// name (on Linux the "<name> Safe Storage" keyring entry, on macOS the
+// Keychain one), so Hushfill cannot decrypt the old files. On first launch
+// it relaunches itself with the switch below and the old name: that process
+// reads the files of the old data folder and passes them in plain text over
+// a pipe (fd 3), never to disk; this one re-encrypts them with the new key.
 const LEGACY_APP_NAME = "PDF Firma";
 const LEGACY_EXPORT_SWITCH = "export-legacy-data";
 const LEGACY_MIGRATED_MARKER = "migrato-da-pdf-firma";
-const LEGACY_EXPORT_TIMEOUT_MS = 120_000; // il portachiavi può chiedere di sbloccarsi
+const LEGACY_EXPORT_TIMEOUT_MS = 120_000; // the keyring may ask to be unlocked
 const LEGACY_FILES = [PROFILES_FILE_NAME, JEV_SETTINGS_FILE_NAME];
 const legacyUserDataDir = path.join(app.getPath("appData"), LEGACY_APP_NAME);
 const exportingLegacyData = app.commandLine.hasSwitch(LEGACY_EXPORT_SWITCH);
 if (exportingLegacyData) {
-  // Prima di "ready": dopo, Chromium ha già scelto la chiave.
+  // Before "ready": afterwards, Chromium has already chosen the key.
   app.setName(LEGACY_APP_NAME);
   app.setPath("userData", legacyUserDataDir);
 }
 
-// Il portachiavi va scelto prima che l'app sia pronta: dopo, Chromium ha già
-// deciso. Un --password-store passato a mano ha la precedenza.
+// The keyring must be chosen before the app is ready: afterwards, Chromium has
+// already decided. A --password-store passed by hand takes precedence.
 const keyring = choosePasswordStoreAtStartup();
 
 function choosePasswordStoreAtStartup() {
   if (process.platform !== "linux") {
-    return null; // Windows e macOS hanno un solo portachiavi, sempre presente
+    return null; // Windows and macOS have a single keyring, always present
   }
   if (app.commandLine.hasSwitch("password-store")) {
     return { store: app.commandLine.getSwitchValue("password-store"), how: "scelto da riga di comando" };
@@ -62,11 +62,11 @@ function choosePasswordStoreAtStartup() {
   return detected;
 }
 
-// Stato per finestra: file iniziale e modifiche non salvate.
+// Per-window state: initial file and unsaved changes.
 const windows = new Map(); // webContents.id -> { win, initialPath, dirty }
 
-// Il primo argomento utile dipende da come è lanciato Electron:
-// in sviluppo argv è [electron, ".", ...], impacchettato è [app, ...].
+// The first useful argument depends on how Electron is launched:
+// in development argv is [electron, ".", ...], packaged it is [app, ...].
 function pdfFromArgv(argv) {
   const args = argv.slice(app.isPackaged ? 1 : 2);
   for (const arg of args) {
@@ -86,7 +86,7 @@ function readPdf(filePath) {
   return { path: filePath, name: path.basename(filePath), data: new Uint8Array(bytes) };
 }
 
-// Scrittura su file temporaneo e rename: un errore a metà non tronca il file esistente.
+// Write to a temporary file and rename: an error halfway does not truncate the existing file.
 function writeAtomically(filePath, bytes) {
   const tmp = `${filePath}.tmp-${process.pid}`;
   fs.writeFileSync(tmp, bytes);
@@ -112,7 +112,7 @@ function createWindow(initialPath = null) {
   const id = win.webContents.id;
   windows.set(id, { win, initialPath, dirty: false });
 
-  // Link esterni del PDF nel browser di sistema, mai dentro l'app.
+  // External links of the PDF in the system browser, never inside the app.
   win.webContents.setWindowOpenHandler(({ url }) => {
     openIfExternal(url);
     return { action: "deny" };
@@ -161,7 +161,7 @@ function stateOf(event) {
   return windows.get(event.sender.id);
 }
 
-// --- File PDF ---------------------------------------------------------------
+// --- PDF files --------------------------------------------------------------
 
 ipcMain.handle("get-initial-file", (event) => {
   const state = stateOf(event);
@@ -224,15 +224,15 @@ ipcMain.on("set-title", (event, title) => {
   stateOf(event)?.win.setTitle(title);
 });
 
-// --- File cifrati col portachiavi (profili e impostazioni di Jev) -------------
+// --- Files encrypted with the keyring (profiles and Jev settings) ------------
 
 function userDataFile(name) {
   return path.join(app.getPath("userData"), name);
 }
 
-// Su Linux, senza portachiavi, Electron ripiega su una chiave fissa
-// ("basic_text"): sarebbe testo in chiaro travestito. Si rifiuta solo dopo
-// aver cercato un portachiavi all'avvio, e si dice cosa si è trovato.
+// On Linux, without a keyring, Electron falls back to a fixed key
+// ("basic_text"): it would be plain text in disguise. It refuses only after
+// looking for a keyring at startup, and says what it found.
 async function assertEncryptionAvailable() {
   const available = await safeStorage.isAsyncEncryptionAvailable();
   const backend = process.platform === "linux" ? safeStorage.getSelectedStorageBackend() : "di sistema";
@@ -252,7 +252,7 @@ async function writeEncrypted(name, text) {
   writeAtomically(userDataFile(name), await safeStorage.encryptStringAsync(text));
 }
 
-// null se il file non esiste ancora.
+// null if the file does not exist yet.
 async function readEncrypted(name) {
   const file = userDataFile(name);
   if (!fs.existsSync(file)) {
@@ -260,7 +260,7 @@ async function readEncrypted(name) {
   }
   await assertEncryptionAvailable();
   const { result, shouldReEncrypt } = await safeStorage.decryptStringAsync(fs.readFileSync(file));
-  // La chiave del portachiavi è stata ruotata: si riscrive con quella nuova.
+  // The keyring key has been rotated: rewrite with the new one.
   if (shouldReEncrypt) {
     await writeEncrypted(name, result);
   }
@@ -272,13 +272,13 @@ ipcMain.handle("profiles-save", (_event, json) => writeEncrypted(PROFILES_FILE_N
 
 // --- Jev ------------------------------------------------------------------------
 
-// Impostazioni salvate: { apiKey?, model?, baseUrl? }, cifrate per intero.
+// Saved settings: { apiKey?, model?, baseUrl? }, encrypted as a whole.
 async function readJevSettings() {
   const json = await readEncrypted(JEV_SETTINGS_FILE_NAME);
   return json ? JSON.parse(json) : {};
 }
 
-// Ambiente, poi impostazioni salvate, poi default.
+// Environment, then saved settings, then defaults.
 async function resolveJevConfig() {
   const saved = await readJevSettings();
   const env = process.env;
@@ -289,8 +289,8 @@ async function resolveJevConfig() {
   };
 }
 
-// La chiave viaggia nell'header: in chiaro (http) solo verso questo computer,
-// per un server compatibile in locale.
+// The key travels in the header: in plain text (http) only towards this
+// computer, for a compatible local server.
 function validateBaseUrl(text) {
   let url;
   try {
@@ -335,7 +335,7 @@ ipcMain.handle("jev-status", async () => {
   return { configured: Boolean(config.apiKey), model: config.model, baseUrl: config.baseUrl };
 });
 
-// Per la finestra Impostazioni: mai la chiave, solo se c'è e da dove viene.
+// For the Settings window: never the key, only whether it exists and where it comes from.
 ipcMain.handle("jev-settings-get", async () => {
   const saved = await readJevSettings();
   const env = process.env;
@@ -349,8 +349,8 @@ ipcMain.handle("jev-settings-get", async () => {
   };
 });
 
-// Valori della finestra non ancora salvati, completati da quelli in uso:
-// "Prova" verifica ciò che si sta per salvare. Campo chiave vuoto = chiave attuale.
+// Window values not yet saved, completed with those in use: "Prova" (test)
+// checks what is about to be saved. Empty key field = current key.
 async function candidateJevConfig(form) {
   const current = await resolveJevConfig();
   return {
@@ -374,7 +374,7 @@ ipcMain.handle("jev-settings-save", async (_event, form) => {
   await writeEncrypted(JEV_SETTINGS_FILE_NAME, JSON.stringify(next));
 });
 
-// Domanda banale, senza dati dell'utente, per verificare chiave e server.
+// Trivial question, with no user data, to check key and server.
 const JEV_PING = {
   state: "Prova di connessione dall'app Hushfill.",
   questions: { prova: { type: "choice", instructions: "Questa è una prova di connessione: rispondi sì.", criteria: { si: "sì", no: "no" } } },
@@ -390,10 +390,10 @@ ipcMain.handle("jev-test", async (_event, form) => {
   return { model: response.model ?? config.model, milliseconds: Date.now() - started };
 });
 
-// HUSHFILL_DEBUG_JEV=1 stampa sul terminale ogni domanda con la risposta,
-// per capire perché un campo è stato riconosciuto male. Domande e risposte
-// non contengono valori del profilo (solo testo del modulo e intestazioni);
-// la chiave non viene mai stampata.
+// HUSHFILL_DEBUG_JEV=1 prints every question with its answer on the terminal,
+// to understand why a field was recognised wrongly. Questions and answers
+// contain no profile values (only the form's text and the headings);
+// the key is never printed.
 function logJevExchange(request, response) {
   for (const [id, question] of Object.entries(request.questions)) {
     console.info(`[jev] ${id}: ${question.instructions}`);
@@ -409,10 +409,10 @@ ipcMain.handle("jev-decide", async (_event, request) => {
   return response;
 });
 
-// --- Migrazione dei dati di "PDF Firma" -----------------------------------------
+// --- Migration of the "PDF Firma" data -----------------------------------------
 
-// Processo figlio, avviato col nome vecchio: legge e decifra i file della
-// vecchia cartella dati e li scrive su fd 3. Non apre finestre.
+// Child process, started with the old name: reads and decrypts the files of
+// the old data folder and writes them to fd 3. It opens no windows.
 async function exportLegacyData() {
   let payload;
   try {
@@ -428,7 +428,7 @@ async function exportLegacyData() {
   app.exit(0);
 }
 
-// writeSync su una pipe può scrivere solo una parte, o rispondere EAGAIN se è piena.
+// writeSync on a pipe may write only part, or answer EAGAIN if it is full.
 function writeAllToFd(fd, bytes) {
   let offset = 0;
   while (offset < bytes.length) {
@@ -442,8 +442,8 @@ function writeAllToFd(fd, bytes) {
   }
 }
 
-// Solo con la cartella dati predefinita: con --user-data-dir (prove, profili
-// di sviluppo) non si va a leggere la cartella vera dell'utente.
+// Only with the default data folder: with --user-data-dir (tests, development
+// profiles) the user's real folder is not read.
 function legacyMigrationNeeded() {
   const userData = app.getPath("userData");
   if (userData !== path.join(app.getPath("appData"), app.getName())) {
@@ -457,7 +457,7 @@ function legacyMigrationNeeded() {
 }
 
 function runLegacyExport() {
-  // In sviluppo execPath è il binario di Electron e va passata la cartella dell'app.
+  // In development execPath is the Electron binary and the app folder must be passed.
   const args = [...(app.isPackaged ? [] : [app.getAppPath()]), `--${LEGACY_EXPORT_SWITCH}`];
   const child = spawn(process.execPath, args, { stdio: ["ignore", "inherit", "inherit", "pipe"] });
   return new Promise((resolve, reject) => {
@@ -480,8 +480,8 @@ function runLegacyExport() {
   });
 }
 
-// La vecchia cartella resta com'è: il segnaposto impedisce di rifare la
-// migrazione (per esempio dopo "Rimuovi chiave", che cancella jev.enc).
+// The old folder stays as it is: the marker prevents redoing the migration
+// (for example after "Rimuovi chiave", remove key, which deletes jev.enc).
 async function migrateLegacyData() {
   if (!legacyMigrationNeeded()) {
     return;
@@ -506,10 +506,10 @@ async function migrateLegacyData() {
   }
 }
 
-// --- Ciclo di vita ------------------------------------------------------------
+// --- Lifecycle ----------------------------------------------------------------
 
-// Una sola istanza: un secondo lancio ("Apri con" su un altro PDF)
-// apre una nuova finestra nel processo già attivo.
+// A single instance: a second launch ("Open with" on another PDF)
+// opens a new window in the process already running.
 if (exportingLegacyData) {
   app.whenReady().then(exportLegacyData);
 } else if (!app.requestSingleInstanceLock()) {
@@ -526,7 +526,7 @@ if (exportingLegacyData) {
     }
   });
 
-  // macOS consegna i file aperti dal Finder con un evento, non in argv.
+  // macOS delivers files opened from the Finder with an event, not in argv.
   app.on("open-file", (event, filePath) => {
     event.preventDefault();
     if (app.isReady()) {

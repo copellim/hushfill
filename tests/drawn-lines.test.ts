@@ -3,7 +3,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { findHorizontalRules, type PathOps } from "../src/drawn-lines.ts";
 
-// Numeri arbitrari ma distinti: il modulo usa solo quelli che riceve.
+// Arbitrary but distinct numbers: the module uses only those it receives.
 const ops: PathOps = {
   save: 1,
   restore: 2,
@@ -38,16 +38,16 @@ function rules(...operators: Op[]) {
   );
 }
 
-test("segmento orizzontale tracciato: è una riga", () => {
+test("stroked horizontal segment: it is a line", () => {
   assert.deepEqual(rules(path(ops.stroke, MOVE, 100, 200, LINE, 300, 200)), [{ x1: 100, x2: 300, y: 200 }]);
 });
 
-test("rettangolo pieno sottile: è una riga, alla sua metà", () => {
+test("thin filled rectangle: it is a line, at its middle", () => {
   const found = rules(path(ops.fill, MOVE, 50, 400, LINE, 250, 400, LINE, 250, 401, LINE, 50, 401, CLOSE));
   assert.deepEqual(found, [{ x1: 50, x2: 250, y: 400.5 }]);
 });
 
-test("la matrice corrente e quella dei form XObject spostano e scalano la riga", () => {
+test("the current matrix and that of form XObjects move and scale the line", () => {
   const found = rules(
     [ops.save, null],
     [ops.transform, [2, 0, 0, 2, 10, 20]],
@@ -63,16 +63,16 @@ test("la matrice corrente e quella dei form XObject spostano e scalano la riga",
   ]);
 });
 
-test("righe a puntini disegnate a pezzi si uniscono", () => {
+test("dotted lines drawn in pieces are joined", () => {
   const dots = [];
   for (let x = 100; x < 200; x += 4) {
     dots.push(path(ops.stroke, MOVE, x, 300, LINE, x + 1.5, 300));
   }
-  // L'ultimo puntino parte da 196 (100 + 24 × 4) e finisce a 197,5.
+  // The last dot starts at 196 (100 + 24 × 4) and ends at 197.5.
   assert.deepEqual(rules(...dots), [{ x1: 100, x2: 197.5, y: 300 }]);
 });
 
-test("scartati: trattini corti, tracciati di ritaglio, curve, righe spesse, verticali", () => {
+test("discarded: short dashes, clipping paths, curves, thick lines, vertical ones", () => {
   const found = rules(
     path(ops.stroke, MOVE, 0, 10, LINE, 20, 10),
     path(endPath, MOVE, 0, 50, LINE, 300, 50),
@@ -85,12 +85,12 @@ test("scartati: trattini corti, tracciati di ritaglio, curve, righe spesse, vert
   assert.deepEqual(found, []);
 });
 
-test("lati di tabelle e riquadri non sono righe da compilare", () => {
+test("sides of tables and boxes are not lines to fill", () => {
   const found = rules(path(ops.stroke, MOVE, 100, 100, LINE, 300, 100, LINE, 300, 130, LINE, 100, 130, CLOSE));
   assert.deepEqual(found, []);
 });
 
-test("righe lunghe quasi quanto la pagina sono escluse dal limite di lunghezza", () => {
+test("lines almost as long as the page are excluded by the length limit", () => {
   const found = findHorizontalRules([ops.constructPath], [[ops.stroke, [new Float32Array([MOVE, 20, 50, LINE, 580, 50])], null]], ops, 535);
   assert.deepEqual(found, []);
 });

@@ -5,27 +5,27 @@ import { combinedValue, headingValue, migrateStore, suggestHeadingLabel, todayTe
 
 const profile: Profile = { id: "p", name: "Prova", values: { "h-nome": "Mario", "h-oggi": "valore vecchio" }, signature: null };
 
-test("la data di oggi è nel formato gg/mm/aaaa", () => {
+test("today's date is in dd/mm/yyyy format", () => {
   assert.equal(todayText(new Date(2026, 0, 5)), "05/01/2026");
 });
 
-test("l'intestazione automatica ignora il valore salvato e dà la data di oggi", () => {
+test("the automatic heading ignores the saved value and gives today's date", () => {
   assert.equal(headingValue({ id: "h-oggi", label: "Data di oggi", description: "", automatic: "today" }, profile), todayText());
   assert.equal(headingValue({ id: "h-nome", label: "Nome", description: "" }, profile), "Mario");
   assert.equal(headingValue({ id: "h-assente", label: "CAP", description: "" }, profile), "");
 });
 
-test("i profili della versione 1 ricevono la data automatica una volta sola", () => {
+test("version 1 profiles receive the automatic date only once", () => {
   const v1 = { version: 1, headings: [{ id: "h-nome", label: "Nome", description: "" }], profiles: [profile], activeProfileId: "p" };
   const migrated = migrateStore(v1);
   assert.equal(migrated.version, 4);
   assert.deepEqual(migrated.headings.map((h) => h.automatic ?? null), [null, "today"]);
-  // Una versione 2 senza data (l'utente l'ha eliminata) resta com'è.
+  // A version 2 without the date (the user deleted it) stays as it is.
   const deleted = { ...migrated, version: 2, headings: migrated.headings.filter((h) => !h.automatic) };
   assert.equal(migrateStore(deleted).headings.length, 1);
 });
 
-test("la versione 3 toglie «Nome e cognome» e i suoi valori; dopo non si tocca più", () => {
+test("version 3 removes «Nome e cognome» and its values; afterwards it is never touched again", () => {
   const v2 = {
     version: 2,
     headings: [
@@ -38,11 +38,11 @@ test("la versione 3 toglie «Nome e cognome» e i suoi valori; dopo non si tocca
   const migrated = migrateStore(v2);
   assert.deepEqual(migrated.headings.map((h) => h.id), ["h-nome"]);
   assert.deepEqual(migrated.profiles[0].values, { "h-nome": "Mario" });
-  // Riaggiunto a mano dall'utente nella versione 3: resta.
+  // Added back by hand by the user in version 3: it stays.
   assert.equal(migrateStore({ ...v2, version: 3 }).headings.length, 2);
 });
 
-test("la versione 4 aggiorna le descrizioni predefinite solo se non toccate", () => {
+test("version 4 updates the default descriptions only if untouched", () => {
   const v3 = {
     version: 3,
     headings: [
@@ -61,7 +61,7 @@ test("la versione 4 aggiorna le descrizioni predefinite solo se non toccate", ()
   assert.equal(migrateStore(edited).headings[0].description, "Mia descrizione");
 });
 
-test("campo combinato: spazio tra le parti, virgola prima della data, vuoto se manca una parte", () => {
+test("combined field: space between the parts, comma before the date, empty if a part is missing", () => {
   const nome = { id: "h-nome", label: "Nome", description: "" };
   const cognome = { id: "h-cognome", label: "Cognome", description: "" };
   const luogo = { id: "h-luogo", label: "Luogo", description: "" };
@@ -72,13 +72,13 @@ test("campo combinato: spazio tra le parti, virgola prima della data, vuoto se m
   assert.deepEqual(combinedValue([nome, cognome], { ...person, values: { "h-nome": "Mario" } }), { value: "", missing: ["Cognome"] });
 });
 
-test("nome proposto per un campo nuovo dal testo stampato accanto", () => {
+test("name proposed for a new field from the text printed next to it", () => {
   assert.equal(suggestHeadingLabel({ tooltip: "", label: "a sinistra: numero di tessera:", fieldName: "" }), "Numero di tessera");
   assert.equal(suggestHeadingLabel({ tooltip: "Targa del veicolo", label: "a sinistra: x", fieldName: "Text3" }), "Targa del veicolo");
   assert.equal(suggestHeadingLabel({ tooltip: "", label: "", fieldName: "Text3" }), "");
   assert.equal(suggestHeadingLabel({ tooltip: "", label: "", fieldName: "matricola" }), "Matricola");
   assert.equal(suggestHeadingLabel({ tooltip: "", label: "a sinistra: iscritto all'albo n.", fieldName: "" }), "Iscritto all'albo");
-  // Lungo: restano le ultime parole, le più vicine al campo, entro 40 caratteri.
+  // Long: the last words, closest to the field, remain, within 40 characters.
   const long = suggestHeadingLabel({ tooltip: "", label: "sopra: A tal fine indica il seguente indirizzo e-mail:", fieldName: "" });
   assert.ok(long.length <= 40 && long.endsWith("indirizzo e-mail"), long);
 });
@@ -96,7 +96,7 @@ function store(): ProfileStore {
   };
 }
 
-test("campi nuovi e valori mancanti finiscono nel profilo, senza toccare l'originale", () => {
+test("new fields and missing values end up in the profile, without touching the original", () => {
   const original = store();
   const next = withProfileUpdates(original, "p", {
     newHeadings: [{ label: " Numero di tessera ", description: "a sinistra: Tessera n.", value: "A123" }],
@@ -110,7 +110,7 @@ test("campi nuovi e valori mancanti finiscono nel profilo, senza toccare l'origi
   assert.deepEqual(original.profiles[0].values, { "h-nome": "Mario" });
 });
 
-test("un campo nuovo con il nome di uno esistente non si duplica e non sovrascrive", () => {
+test("a new field with the name of an existing one is not duplicated and does not overwrite", () => {
   const next = withProfileUpdates(store(), "p", {
     newHeadings: [
       { label: "nome", description: "", value: "Luigi" },

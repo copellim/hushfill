@@ -1,7 +1,7 @@
-// Sceglie il portachiavi per safeStorage su Linux guardando cosa c'è davvero
-// sul bus di sessione, invece di indovinarlo dal desktop: Chromium decide
-// da XDG_CURRENT_DESKTOP e sugli ambienti che non conosce (Hyprland, Sway,
-// i3…) ripiega su "basic_text", cioè una chiave fissa, senza protezione.
+// Chooses the keyring for safeStorage on Linux by looking at what is really
+// on the session bus, instead of guessing it from the desktop: Chromium decides
+// from XDG_CURRENT_DESKTOP and on environments it does not know (Hyprland, Sway,
+// i3…) falls back to "basic_text", that is a fixed key, with no protection.
 const { spawnSync } = require("node:child_process");
 
 const SECRET_SERVICE = "org.freedesktop.secrets";
@@ -9,16 +9,16 @@ const KWALLET6 = "org.kde.kwalletd6";
 const KWALLET5 = "org.kde.kwalletd5";
 const DBUS_TIMEOUT_MS = 2000;
 
-// Valori di --password-store di Chromium per ciascun servizio, in ordine di
-// preferenza. Secret Service prima: lo offrono gnome-keyring, KeePassXC e
-// anche KWallet recente, e libsecret parla con tutti.
+// Chromium's --password-store values for each service, in order of
+// preference. Secret Service first: gnome-keyring, KeePassXC and recent
+// KWallet all offer it, and libsecret talks to all of them.
 const STORES = [
   { busName: SECRET_SERVICE, store: "gnome-libsecret" },
   { busName: KWALLET6, store: "kwallet6" },
   { busName: KWALLET5, store: "kwallet5" },
 ];
 
-// Nomi dall'output di dbus-send --print-reply: righe `string "nome"`.
+// Names from the output of dbus-send --print-reply: lines `string "name"`.
 function parseBusNames(output) {
   return new Set([...output.matchAll(/^\s*string "([^"]+)"$/gm)].map((match) => match[1]));
 }
@@ -35,8 +35,8 @@ function listBusNames(method) {
   return parseBusNames(result.stdout);
 }
 
-// Un servizio già in esecuzione vince su uno solo attivabile: è quello che
-// l'utente usa davvero (qui gnome-keyring può convivere con KWallet installato).
+// A service already running wins over one that can only be activated: it is the
+// one the user really uses (here gnome-keyring can coexist with an installed KWallet).
 function choosePasswordStore(running, activatable) {
   for (const names of [running, activatable]) {
     const found = STORES.find(({ busName }) => names.has(busName));
@@ -47,8 +47,9 @@ function choosePasswordStore(running, activatable) {
   return null;
 }
 
-// Restituisce { store, busName, how } con how "in esecuzione"/"attivabile",
-// oppure { store: null, reason } se non c'è un portachiavi o non si sa.
+// Returns { store, busName, how } with how "in esecuzione" (running) or
+// "attivabile" (activatable), or { store: null, reason } if there is no keyring
+// or it cannot be told.
 function detectPasswordStore() {
   const running = listBusNames("ListNames");
   if (!running) {

@@ -1,8 +1,8 @@
 #!/bin/sh
-# Installa Hushfill per l'utente corrente (nessun privilegio richiesto):
-# copia la build in ~/.local/opt, crea il comando hushfill e la voce del
-# menu applicazioni registrata per i PDF, così compare in "Apri con".
-# Prima: npm run install:linux (che lancia la build e poi questo script).
+# Installs Hushfill for the current user (no privileges required):
+# copies the build to ~/.local/opt, creates the hushfill command and the
+# application menu entry registered for PDFs, so it shows up in "Open with".
+# Before: npm run install:linux (which runs the build and then this script).
 set -eu
 
 ROOT=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
@@ -36,9 +36,9 @@ MimeType=application/pdf;
 StartupWMClass=Hushfill
 EOF
 
-# L'app si chiamava "PDF Firma": si toglie la vecchia installazione (solo i
-# programmi, non la cartella dati ~/.config/PDF Firma, che Hushfill importa al
-# primo avvio) e, se era il lettore PDF predefinito, lo diventa Hushfill.
+# The app used to be called "PDF Firma": the old installation is removed (only
+# the programs, not the data folder ~/.config/PDF Firma, which Hushfill imports
+# on first launch) and, if it was the default PDF reader, Hushfill becomes it.
 LEGACY_DESKTOP="pdf-firma.desktop"
 if [ "$(xdg-mime query default application/pdf 2>/dev/null)" = "$LEGACY_DESKTOP" ]; then
   xdg-mime default hushfill.desktop application/pdf

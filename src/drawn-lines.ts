@@ -1,10 +1,10 @@
-// Trova le righe orizzontali disegnate come grafica (non come caratteri "_"
-// o "."): molti moduli tracciano la riga su cui scrivere con un segmento o
-// con un rettangolo sottilissimo. Lavora sulla lista di operatori di pdf.js
-// ed è indipendente dal DOM, così si prova con dati finti.
+// Finds the horizontal lines drawn as graphics (not as "_" or "."
+// characters): many forms draw the line to write on with a segment or
+// with a very thin rectangle. It works on pdf.js's operator list
+// and is independent of the DOM, so it can be tested with fake data.
 
-// Codici degli operatori di pdf.js che servono qui, passati da chi chiama
-// (sono OPS di pdfjs-dist) per non importare pdf.js nei test.
+// Codes of the pdf.js operators needed here, passed by the caller
+// (they are pdfjs-dist's OPS) so as not to import pdf.js in the tests.
 export interface PathOps {
   save: number;
   restore: number;
@@ -23,19 +23,19 @@ export interface PathOps {
   closeEOFillStroke: number;
 }
 
-// Codici dei comandi dentro il buffer di constructPath (DrawOPS di pdf.js).
+// Codes of the commands inside the constructPath buffer (pdf.js's DrawOPS).
 const DRAW_MOVE_TO = 0;
 const DRAW_LINE_TO = 1;
 const DRAW_CURVE_TO = 2;
 const DRAW_QUADRATIC_CURVE_TO = 3;
 const DRAW_CLOSE_PATH = 4;
 
-// Misure in punti PDF.
-const AXIS_TOLERANCE = 0.5; // scarto ammesso per dire "orizzontale" o "verticale"
-const MAX_RULE_THICKNESS = 3; // oltre è una barra o un riquadro, non una riga
-const MIN_RULE_LENGTH = 30; // più corta è un trattino, un segno grafico
+// Measures in PDF points.
+const AXIS_TOLERANCE = 0.5; // deviation allowed to call it "horizontal" or "vertical"
+const MAX_RULE_THICKNESS = 3; // beyond this it is a bar or a box, not a line
+const MIN_RULE_LENGTH = 30; // shorter than this it is a dash, a graphic mark
 const MIN_VERTICAL_LENGTH = 4;
-const MERGE_GAP = 3; // righe tratteggiate o a puntini disegnate a pezzi
+const MERGE_GAP = 3; // dashed or dotted lines drawn in pieces
 const SAME_LINE_TOLERANCE = 1;
 const TABLE_CORNER_TOLERANCE = 2;
 
@@ -62,7 +62,7 @@ interface Subpath {
 
 const IDENTITY: Matrix = [1, 0, 0, 1, 0, 0];
 
-// Matrice che applica prima `inner` e poi `outer` (come l'operatore cm).
+// Matrix that applies `inner` first and then `outer` (like the cm operator).
 function concat(outer: Matrix, inner: Matrix): Matrix {
   return [
     outer[0] * inner[0] + outer[2] * inner[1],
@@ -104,7 +104,7 @@ function readSubpaths(buffer: ArrayLike<number>, ctm: Matrix): Subpath[] {
         current.closed = true;
       }
     } else {
-      break; // comando sconosciuto: meglio fermarsi che leggere coordinate sbagliate
+      break; // unknown command: better to stop than to read wrong coordinates
     }
   }
   return subpaths.filter((subpath) => !subpath.curved);
@@ -128,8 +128,8 @@ function collectStroked(subpath: Subpath, lineWidth: number, into: Collected): v
   }
 }
 
-// Un riempimento conta solo se è un rettangolo allineato agli assi:
-// sottile in altezza è una riga, sottile in larghezza un bordo verticale.
+// A fill counts only if it is an axis-aligned rectangle:
+// thin in height it is a line, thin in width a vertical border.
 function collectFilled(subpath: Subpath, into: Collected): void {
   const xs = subpath.points.map(([x]) => x);
   const ys = subpath.points.map(([, y]) => y);
@@ -176,11 +176,11 @@ function collectSegments(fnArray: ArrayLike<number>, argsArray: ArrayLike<unknow
     } else if (fn === ops.constructPath) {
       const [paintOp, [buffer]] = args as [number, [ArrayLike<number> | null]];
       if (!buffer || !(stroking.has(paintOp) || filling.has(paintOp))) {
-        continue; // tracciati di ritaglio o vuoti: non si vedono
+        continue; // clipping or empty paths: they are not visible
       }
       for (const subpath of readSubpaths(buffer, ctm)) {
         if (stroking.has(paintOp)) {
-          // Spessore zero significa "il più sottile possibile", ma è visibile.
+          // Zero width means "as thin as possible", but it is visible.
           collectStroked(subpath, Math.max(lineWidth, 0) * scaleOf(ctm), collected);
         } else {
           collectFilled(subpath, collected);
@@ -191,8 +191,8 @@ function collectSegments(fnArray: ArrayLike<number>, argsArray: ArrayLike<unknow
   return collected;
 }
 
-// Unisce i pezzi sulla stessa altezza che si toccano o quasi: una riga a
-// puntini o tratteggiata disegnata a segmenti diventa una riga sola.
+// Joins the pieces at the same height that touch or nearly touch: a dotted
+// or dashed line drawn in segments becomes a single line.
 function mergeHorizontals(rules: HorizontalRule[]): HorizontalRule[] {
   const sorted = [...rules].sort((a, b) => a.y - b.y || a.x1 - b.x1);
   const merged: HorizontalRule[] = [];
@@ -216,8 +216,8 @@ function touchesVertical(x: number, y: number, verticals: VerticalRule[]): boole
   );
 }
 
-// Lato di una tabella o di un riquadro: chiuso da bordi verticali a entrambi
-// gli estremi. Non è una riga su cui scrivere.
+// Side of a table or a box: closed by vertical borders at both ends.
+// It is not a line to write on.
 function isBoxEdge(rule: HorizontalRule, verticals: VerticalRule[]): boolean {
   return touchesVertical(rule.x1, rule.y, verticals) && touchesVertical(rule.x2, rule.y, verticals);
 }

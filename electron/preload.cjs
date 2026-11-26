@@ -9,7 +9,7 @@ contextBridge.exposeInMainWorld("api", {
   confirm: (message, detail, okLabel) => ipcRenderer.invoke("confirm", message, detail, okLabel),
   setDirty: (dirty) => ipcRenderer.send("set-dirty", dirty),
   setTitle: (title) => ipcRenderer.send("set-title", title),
-  // Percorso reale di un file trascinato nella finestra.
+  // Real path of a file dropped on the window.
   pathForFile: (file) => webUtils.getPathForFile(file),
   loadProfiles: () => ipcRenderer.invoke("profiles-load"),
   saveProfiles: (json) => ipcRenderer.invoke("profiles-save", json),
